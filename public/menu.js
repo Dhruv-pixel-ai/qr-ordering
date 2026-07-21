@@ -1,11 +1,55 @@
 const params = new URLSearchParams(window.location.search);
 const table = params.get("table") || "1";
-document.getElementById("tableBadge").textContent = `Table ${table}`;
 
 const socket = io();
 let menu = [];
 let cart = {}; // id -> {item, qty}
 let activeCategory = null;
+
+// ---------- Ask the customer's name ONCE, right when the QR is scanned ----------
+// Stored per browser tab session, so the same person isn't asked again for each
+// order, but a new customer scanning later gets a fresh prompt.
+const NAME_KEY = `kds_customer_name_t${table}`;
+let customerName = sessionStorage.getItem(NAME_KEY) || "";
+
+function updateHeaderBadge() {
+  document.getElementById("tableBadge").textContent = customerName
+    ? `Table ${table} · ${customerName}`
+    : `Table ${table}`;
+}
+
+async function showWelcomeIfNeeded() {
+  if (customerName) {
+    updateHeaderBadge();
+    return;
+  }
+  // Personalize the welcome with the café name from settings (best-effort).
+  try {
+    const s = await fetch("/api/settings").then((r) => r.json());
+    if (s.businessName) document.getElementById("welcomeTitle").textContent = `Welcome to ${s.businessName}!`;
+  } catch (e) {}
+  document.getElementById("welcomeSubtitle").textContent = `You're at Table ${table}`;
+  document.getElementById("welcomeOverlay").classList.remove("hidden");
+  setTimeout(() => document.getElementById("welcomeName").focus(), 150);
+}
+
+function startOrdering() {
+  const name = document.getElementById("welcomeName").value.trim();
+  if (!name) return showToast("Please enter your name to start");
+  customerName = name;
+  sessionStorage.setItem(NAME_KEY, name);
+  document.getElementById("welcomeOverlay").classList.add("hidden");
+  updateHeaderBadge();
+  showToast(`Hi ${name}! Add items and place your order 🍽️`);
+}
+
+document.getElementById("welcomeStartBtn").addEventListener("click", startOrdering);
+document.getElementById("welcomeName").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") startOrdering();
+});
+
+updateHeaderBadge();
+showWelcomeIfNeeded();
 
 async function loadMenu() {
   const res = await fetch("/api/menu");
@@ -145,11 +189,24 @@ function updateCartUI() {
 
   const total = rows.reduce((sum, c) => sum + c.item.price * c.qty, 0);
   document.getElementById("cartTotal").textContent = total;
+
+  // Floating View Cart bar — visible whenever the cart has items
+  const bar = document.getElementById("viewCartBar");
+  if (count > 0) {
+    document.getElementById("viewCartBarText").textContent =
+      `🛒 View Cart • ${count} item${count > 1 ? "s" : ""}`;
+    document.getElementById("viewCartBarTotal").textContent = `₹${total}`;
+    bar.classList.remove("hidden");
+  } else {
+    bar.classList.add("hidden");
+  }
 }
 
-document.getElementById("cartBtn").addEventListener("click", () => {
+function openCart() {
   document.getElementById("cartDrawer").classList.remove("hidden");
-});
+}
+document.getElementById("cartBtn").addEventListener("click", openCart);
+document.getElementById("viewCartBar").addEventListener("click", openCart);
 document.getElementById("closeCart").addEventListener("click", () => {
   document.getElementById("cartDrawer").classList.add("hidden");
 });
@@ -157,8 +214,11 @@ document.getElementById("closeCart").addEventListener("click", () => {
 document.getElementById("placeOrderBtn").addEventListener("click", async () => {
   const rows = Object.values(cart);
   if (!rows.length) return showToast("Add items to cart first");
-  const customerName = document.getElementById("customerName").value.trim();
-  if (!customerName) return showToast("Please enter your name to place the order");
+  if (!customerName) {
+    // Safety net: shouldn't normally happen since name is captured on scan.
+    document.getElementById("cartDrawer").classList.add("hidden");
+    return showWelcomeIfNeeded();
+  }
   const items = rows.map((c) => ({ id: c.item.id, name: c.item.name, price: c.item.price, qty: c.qty }));
   const note = document.getElementById("orderNote").value;
 
@@ -169,7 +229,7 @@ document.getElementById("placeOrderBtn").addEventListener("click", async () => {
   });
   const data = await res.json();
   if (data.success) {
-    showToast("✅ Order placed! The kitchen has been notified.");
+    showToast(`✅ Order placed, ${customerName}! The kitchen has been notified.`);
     cart = {};
     document.getElementById("orderNote").value = "";
     renderMenu();

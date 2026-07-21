@@ -12,12 +12,29 @@
       <h1>🍽️ Our Menu</h1>
       <p class="table-badge" id="tableBadge">Table -</p>
     </div>
-    <button id="cartBtn" class="cart-btn">🛒 <span id="cartCount">0</span></button>
+    <button id="cartBtn" class="cart-btn">🛒 View Cart <span id="cartCount" class="cart-count-badge">0</span></button>
   </header>
+
+  <!-- Welcome screen: ask the customer's name ONCE when the QR is scanned -->
+  <div id="welcomeOverlay" class="welcome-overlay hidden">
+    <div class="welcome-card">
+      <div class="welcome-emoji">👋</div>
+      <h2 id="welcomeTitle">Welcome!</h2>
+      <p id="welcomeSubtitle" class="welcome-subtitle">You're at Table -</p>
+      <input id="welcomeName" type="text" placeholder="Enter your name to start" autocomplete="name" maxlength="40" />
+      <button id="welcomeStartBtn" class="welcome-start-btn">Start Ordering</button>
+    </div>
+  </div>
 
   <div id="categoryTabs" class="tabs"></div>
 
   <main id="menuList" class="menu-list"></main>
+
+  <!-- Floating bar so the cart is always visible once items are added -->
+  <button id="viewCartBar" class="view-cart-bar hidden">
+    <span id="viewCartBarText">View Cart • 0 items</span>
+    <span id="viewCartBarTotal">₹0</span>
+  </button>
 
   <div id="cartDrawer" class="cart-drawer hidden">
     <div class="cart-header">
@@ -25,8 +42,8 @@
       <button id="closeCart">✕</button>
     </div>
     <div id="cartItems" class="cart-items"></div>
-    <input id="customerName" type="text" placeholder="Your Name (required)" required />
-    <textarea id="orderNote" placeholder="Any special instructions? (optional)"></textarea>
+    <label class="note-label" for="orderNote">Cooking instructions / special requests (optional)</label>
+    <textarea id="orderNote" placeholder="e.g. Less spicy, no onion, extra cheese, serve pizza first…"></textarea>
     <div class="cart-footer">
       <div class="cart-total">Total: ₹<span id="cartTotal">0</span></div>
       <button id="placeOrderBtn" class="place-order-btn">Place Order</button>

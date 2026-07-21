@@ -24,9 +24,51 @@ body {
 .topbar h1 { font-size: 1.2rem; margin: 0; }
 .table-badge { margin: 2px 0 0; font-size: 0.85rem; opacity: 0.9; }
 .cart-btn {
-  background: rgba(255,255,255,0.2); border: none; color: white;
-  padding: 8px 14px; border-radius: 20px; font-size: 1rem; cursor: pointer;
+  background: white; border: none; color: var(--primary);
+  padding: 9px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15); white-space: nowrap;
 }
+.cart-count-badge {
+  background: var(--primary); color: white; border-radius: 50%;
+  min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; padding: 0 4px;
+}
+
+/* Welcome overlay — asks name once on QR scan */
+.welcome-overlay {
+  position: fixed; inset: 0; background: rgba(20, 10, 5, 0.75); z-index: 100;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.welcome-overlay.hidden { display: none; }
+.welcome-card {
+  background: white; border-radius: 18px; padding: 28px 22px; width: 100%; max-width: 340px;
+  text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+}
+.welcome-emoji { font-size: 2.4rem; }
+.welcome-card h2 { margin: 8px 0 4px; font-size: 1.25rem; }
+.welcome-subtitle { margin: 0 0 18px; color: var(--muted); font-size: 0.9rem; }
+.welcome-card input {
+  width: 100%; padding: 12px; border-radius: 10px; border: 1.5px solid #ddd;
+  font-size: 1rem; text-align: center;
+}
+.welcome-card input:focus { outline: none; border-color: var(--primary); }
+.welcome-start-btn {
+  margin-top: 12px; width: 100%; background: var(--primary); color: white; border: none;
+  padding: 13px; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer;
+}
+
+/* Floating View Cart bar — always visible once items are added */
+.view-cart-bar {
+  position: fixed; bottom: 16px; left: 16px; right: 16px; z-index: 15;
+  background: var(--primary); color: white; border: none; border-radius: 12px;
+  padding: 14px 18px; font-size: 1rem; font-weight: 700; cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 4px 14px rgba(217, 72, 15, 0.4);
+}
+.view-cart-bar.hidden { display: none; }
+
+.note-label { margin: 10px 18px 0; font-size: 0.8rem; color: var(--muted); }
 .tabs {
   display: flex; gap: 8px; overflow-x: auto; padding: 12px;
   background: var(--bg); position: sticky; top: 58px; z-index: 9;
@@ -80,8 +122,7 @@ body {
 .cart-header button { border: none; background: none; font-size: 1.2rem; cursor: pointer; }
 .cart-items { padding: 10px 18px; overflow-y: auto; flex: 1; }
 .cart-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f2f2f2; align-items: center; }
-#customerName { margin: 10px 18px 0; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 0.95rem; }
-#orderNote { margin: 10px 18px; padding: 8px; border-radius: 8px; border: 1px solid #ddd; resize: none; height: 50px; }
+#orderNote { margin: 6px 18px 10px; padding: 8px; border-radius: 8px; border: 1px solid #ddd; resize: none; height: 54px; font-size: 0.9rem; }
 .cart-footer { padding: 14px 18px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
 .cart-total { font-weight: 700; font-size: 1.1rem; }
 .place-order-btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-size: 1rem; cursor: pointer; }

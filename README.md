@@ -1,106 +1,110 @@
-# QR Code Food Ordering System
+# QR Code Food Ordering System — THE KD'S CAFE
 
-A complete, self-hosted QR ordering system for a restaurant. Runs on **your local computer** — no internet, no payment gateway, no cloud account needed. Customers' phones and your computer just need to be on the **same WiFi**.
+A complete QR ordering system for a restaurant. Storage is **MongoDB (Atlas)** so data survives redeploys and works on cloud hosting. No payment gateway — bills are settled manually.
 
 ## What it does
 - Each table has its own QR code (pointing to `menu.html?table=N`) for customers who want to order themselves.
-- **Waiter order entry** (`waiter.html`) — if a customer would rather tell the waiter what they want, the waiter opens this page on their own phone/tablet, picks the table number, enters the customer's name, and places the order for them. It shows up on the dashboard exactly like a self-order.
-- Every order (self or waiter-placed) requires a **customer name** — shown on the dashboard and on the final bill.
-- Orders appear **instantly** on your computer's dashboard, grouped by table (via Socket.io real-time sync). There's no "Preparing/Ready/Served" status step — orders simply sit on the table's card until billed.
-- Orders **stay visible** on the dashboard until the staff explicitly clicks **Generate Bill** for that table — nothing disappears before that.
-- Generate Bill combines all of that table's unbilled orders (whether self-ordered or waiter-entered) into one itemized bill (with 5% tax) — shown and printable.
-- **Clear Table** resets it for the next customer.
-- No payment gateway — bill is settled manually (cash/card machine), as requested.
+- **Waiter order entry** (`waiter.html`) — waiter picks the table number, enters the customer's name, and places the order for them. Shows up on the dashboard exactly like a self-order.
+- Every order (self or waiter-placed) requires a **customer name** — shown on the dashboard and the bill.
+- Orders appear **instantly** on the admin dashboard, grouped by table (Socket.io real-time sync).
+- Orders **stay visible** until the staff explicitly finishes them: Generate Bill is a *preview*; the order only closes on **Print** or **Clear Table**. Just closing the bill popup changes nothing.
+- Bills print in **KOT/thermal receipt format (80mm)**, with café name, address, phone, bill no., GST and totals.
+- **Menu Manager** (`menu-manager.html`): add/edit/delete items, change prices, mark out-of-stock, and edit café details + GST% — all live, no restart, no developer.
 
-## 1. Install (one-time)
-You need [Node.js](https://nodejs.org) (v18+) installed on the computer that will run the server.
+## Setup
 
+### 1. Create a MongoDB Atlas cluster (free)
+1. Go to https://www.mongodb.com/cloud/atlas and sign up (free tier is enough).
+2. Create a cluster (choose the free **M0** tier, any nearby region e.g. Mumbai).
+3. In **Database Access**, create a database user with a username + password.
+4. In **Network Access**, add your IP — or `0.0.0.0/0` to allow from anywhere (needed for most cloud hosts).
+5. Click **Connect → Drivers** and copy the connection string. It looks like:
+   ```
+   mongodb+srv://USERNAME:PASSWORD@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
+   ```
+
+### 2. Configure environment variables
 ```bash
 cd qr-ordering
-npm install
+cp .env.example .env
 ```
+Edit `.env` and set:
+```
+MONGODB_URI=mongodb+srv://USERNAME:PASSWORD@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
+DB_NAME=kds_cafe
+```
+**Never commit `.env` to git** — it contains your database password. It's already in `.gitignore`.
 
-## 2. Start the server
+> **No Atlas yet? Quick trial mode:** set `MONGODB_URI=memory` to run with a temporary in-memory database. Everything works, but **all data is lost when the server stops** — use it only to try the app, never in production.
+
+### 3. Install & run
+Requires [Node.js](https://nodejs.org) v18+.
 ```bash
+npm install
 npm start
 ```
-You'll see something like:
+On **first startup with an empty database**, the app automatically migrates (seeds) your existing data from `data/menu.json` and `data/settings.json` (and `data/orders.json` if present) into MongoDB. After that, MongoDB is the source of truth — the JSON files are no longer read or written.
+
+You'll see:
 ```
+🗄️  Connected to MongoDB — database: kds_cafe
+🌱 Seeded 84 menu items from data/menu.json
 ✅ Server running!
-   Staff dashboard : http://192.168.1.5:3000/admin.html
-   QR code page    : http://192.168.1.5:3000/qr.html
-   Customer menu   : http://192.168.1.5:3000/menu.html?table=1
 ```
-Keep this terminal window open — this computer is now your restaurant's server.
 
-## 3. Print QR codes for each table
-Open `http://<your-ip>:3000/qr.html` in a browser on that computer, click **Print All**, cut out each table's QR code and place it on the matching table.
+### 4. Deploying to a cloud host (Render / Railway / Fly.io / a VPS, etc.)
+1. Push the code to a git repo (the `.gitignore` keeps `.env` and `node_modules` out).
+2. On your host, set these **environment variables** in its dashboard (don't upload `.env`):
+   - `MONGODB_URI` — your Atlas connection string
+   - `DB_NAME` — e.g. `kds_cafe`
+   - `TOTAL_TABLES` — e.g. `50`
+   - `BASE_URL` — your public URL, e.g. `https://kdscafe.onrender.com` — **important**: this makes the printed table QR codes point to your public site instead of a LAN IP.
+   - `PORT` is usually set automatically by the host.
+3. Set the start command to `npm start`.
+4. In Atlas **Network Access**, make sure your host's IPs are allowed (simplest: `0.0.0.0/0`).
+5. Re-print QR codes from `/qr.html` after deploying so they contain the public URL.
 
-> Change the number of tables in `server.js` → `const TOTAL_TABLES = 12;`
+## Daily use
+- **Staff dashboard:** `/admin.html` — live table-wise orders, Generate Bill, Print, Clear Table.
+- **Print table QR codes:** `/qr.html` → Print All.
+- **Waiter order entry:** `/waiter.html` (also linked from the dashboard header).
+- **Menu Manager:** `/menu-manager.html` — menu items + Billing Settings (café name/address/phone, GST%).
+- **Customer:** scans the table QR → `menu.html?table=N` → browses, adds to cart, enters name, places order.
 
-## 4. Open the staff dashboard
-On the restaurant's computer, open:
-```
-http://<your-ip>:3000/admin.html
-```
-Leave this tab open at the counter/kitchen — new orders pop in live with a sound alert.
+## Bill behavior (important)
+- **Generate Bill** = preview only. Order stays on the dashboard.
+- **Print** = prints receipt (80mm KOT format) and closes the order.
+- **Clear Table** = closes/removes the order and frees the table.
+- **Close** = just closes the popup; nothing changes.
+- GST% changes apply to the *next* bill generated (already-closed bills keep their original rate).
 
-## 5. Waiter order entry (no QR needed)
-If a customer prefers to just tell the waiter their order, the waiter opens:
-```
-http://<your-ip>:3000/waiter.html
-```
-on their own phone (or a tablet at the counter), selects the table number, enters the customer's name, browses the menu, and hits **Submit Order**. It appears on the dashboard instantly, same as a self-ordered one — tagged "🧑‍💼 Waiter" so staff can tell them apart. There's also a **"Take Order (Waiter)"** button right on the dashboard header.
+## Data storage
+MongoDB collections:
+| Collection | Contents |
+|---|---|
+| `menu` | Menu items (`id`, `category`, `name`, `price`, `veg`, `desc`, `inStock`) |
+| `orders` | Orders (`id`, `table`, `items[]`, `customerName`, `source`, `waiterName`, `billed`, `createdAt`) |
+| `settings` | One document (`key: "app"`): `gstPercent`, `businessName`, `address`, `phone` |
 
-## Managing the menu — no developer or deployment needed
-Open **"Manage Menu"** from the dashboard header, or go directly to:
-```
-http://<your-ip>:3000/menu-manager.html
-```
-From here you can, live, with no code changes or restarts:
-- **Add a new item** — fill in category, name, price, veg/non-veg, description, click Add Item.
-- **Change a price or name** — just click into the field, edit, and click away (auto-saves).
-- **Mark an item Out of Stock** — untick "In stock"; it immediately grays out and can't be added on the customer menu or waiter screen (both the QR menu and waiter app update live via the same real-time connection used for orders — no refresh needed).
-- **Remove an item entirely** — click the 🗑 button.
-
-Every change is saved straight to `data/menu.json`, so it survives restarts too.
-
-## Bill / receipt customization (also from Menu Manager)
-The same page has a **Billing Settings** box at the top where you can set, live, with no restart:
-- Café/restaurant name, address, and phone — printed at the top-center of every bill.
-- **GST %** — set it to `5`, `0`, or any custom number; it's applied to the *next* bill generated (already-printed bills keep whatever rate was in effect then, for accurate record-keeping).
-
-The bill itself is designed like a proper **KOT/thermal receipt** (80mm width) rather than an A4 printout — so if you connect a thermal receipt printer, it prints cleanly on that narrow roll paper instead of wasting a full A4 sheet. It includes: café header, bill number, table number, date/time, guest name, itemized list, subtotal, GST line, grand total, and a "Thank you" footer. The Print/Clear Table/Close buttons never appear on the printed copy — only on-screen.
-
-## 6. Customer flow (on their phone, self-order)
-1. Scan the table's QR code.
-2. Browse menu by category, add items, enter their name, place order.
-3. Order shows up instantly on the dashboard under that table.
-
-## Editing the menu the old way (not recommended)
-You can still hand-edit `data/menu.json` directly if you want, but the **Menu Manager dashboard above is the intended way** — no restart, no file editing, no developer needed.
-
-## Notes on "local computer" requirement
-Because phones need to reach this server, make sure:
-- The staff computer and all customer phones are on the **same WiFi network**.
-- Your firewall allows inbound connections on port 3000 (Windows may prompt "Allow access" the first time — click Allow).
-- Use the local IP printed in the terminal (e.g. `192.168.1.5`), not `localhost`, in the QR codes — this is already handled automatically.
+The old `data/*.json` files are kept only as the **one-time seed source** for a fresh database.
 
 ## Folder structure
 ```
 qr-ordering/
-  server.js          # Express + Socket.io backend, all APIs
-  data/menu.json      # Editable menu
-  data/orders.json     # Auto-created, stores live orders
+  server.js            # Express + Socket.io backend, all APIs (MongoDB-backed)
+  db.js                # MongoDB connection + first-run seeding (+ dev memory mode)
+  .env.example         # Template for environment variables (copy to .env)
+  data/menu.json        # Seed data only (first run into an empty DB)
+  data/settings.json    # Seed data only
   public/
     menu.html/css/js       # Customer-facing menu + cart (self-order via QR)
     waiter.html/css/js     # Waiter order-entry screen (table select + customer name)
     admin.html/css/js      # Staff dashboard (table-wise live orders + billing)
-    menu-manager.html/css/js  # Add/edit/remove items, prices, out-of-stock — live, no deploy
+    menu-manager.html/css/js  # Menu + billing settings management — live, no deploy
     qr.html                # Printable QR codes per table
 ```
 
-## Optional next steps
-- Run this on a Raspberry Pi or an always-on mini PC so it's always available.
-- Assign a static local IP to the server machine so QR codes never change.
-- Add categories like "Out of stock" toggle in `menu.json`.
+## Local WiFi notes (if running on a computer in the restaurant)
+- The staff computer and customer phones must be on the **same WiFi network**.
+- Allow inbound connections on port 3000 in your firewall (Windows will prompt once — click Allow).
+- QR codes automatically use the machine's local IP unless `BASE_URL` is set.
