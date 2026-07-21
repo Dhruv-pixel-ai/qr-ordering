@@ -1,0 +1,52 @@
+.add-item-bar {
+  background: white; padding: 16px 24px; border-bottom: 1px solid #eee;
+}
+.add-item-bar h2 { margin: 0 0 10px; font-size: 1rem; }
+.add-item-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.add-item-form input, .add-item-form select {
+  padding: 8px; border-radius: 8px; border: 1px solid #ddd; font-size: 0.9rem;
+}
+#newCategory { flex: 1.4; min-width: 160px; }
+#newName { flex: 1.4; min-width: 160px; }
+#newPrice { width: 100px; }
+#newDesc { flex: 1.6; min-width: 160px; }
+.add-item-form button {
+  background: #d9480f; color: white; border: none; padding: 8px 18px;
+  border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+}
+
+.mm-list { padding: 16px 24px; }
+.mm-category { margin-bottom: 24px; }
+.mm-category h3 { font-size: 1rem; color: #444; border-bottom: 2px solid #eee; padding-bottom: 6px; }
+.mm-row {
+  display: flex; align-items: center; gap: 10px; background: white;
+  border-radius: 10px; padding: 10px 14px; margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.mm-row.out-of-stock { opacity: 0.55; }
+.mm-name-block { flex: 2; min-width: 140px; }
+.mm-name-block input { font-weight: 600; border: none; background: transparent; width: 100%; font-size: 0.95rem; }
+.mm-name-block input:focus { outline: 1px solid #d9480f; border-radius: 4px; }
+.mm-desc-input {
+  border: none; background: transparent; width: 100%; font-size: 0.78rem; color: #888; margin-top: 2px;
+}
+.mm-desc-input:focus { outline: 1px solid #d9480f; border-radius: 4px; }
+.mm-price-input {
+  width: 80px; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 0.9rem; text-align: right;
+}
+.mm-veg-select { padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 0.8rem; }
+.stock-toggle {
+  display: flex; align-items: center; gap: 6px; font-size: 0.78rem; cursor: pointer; user-select: none;
+}
+.stock-toggle input { transform: scale(1.2); cursor: pointer; }
+.mm-delete-btn {
+  border: none; background: #f1f3f5; color: #c92a2a; border-radius: 6px;
+  padding: 6px 10px; cursor: pointer; font-size: 0.9rem;
+}
+.mm-save-hint { font-size: 0.7rem; color: #aaa; }
+
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: #2b2b2b; color: white; padding: 10px 18px; border-radius: 8px; z-index: 30;
+}
+.toast.hidden { display: none; }

@@ -1,0 +1,92 @@
+:root {
+  --primary: #d9480f;
+  --bg: #fdf8f3;
+  --card: #ffffff;
+  --text: #2b2b2b;
+  --muted: #8a8a8a;
+  --veg: #2f9e44;
+  --nonveg: #c92a2a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding-bottom: 90px;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--primary); color: white;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px;
+}
+.topbar h1 { font-size: 1.2rem; margin: 0; }
+.table-badge { margin: 2px 0 0; font-size: 0.85rem; opacity: 0.9; }
+.cart-btn {
+  background: rgba(255,255,255,0.2); border: none; color: white;
+  padding: 8px 14px; border-radius: 20px; font-size: 1rem; cursor: pointer;
+}
+.tabs {
+  display: flex; gap: 8px; overflow-x: auto; padding: 12px;
+  background: var(--bg); position: sticky; top: 58px; z-index: 9;
+}
+.tab {
+  flex-shrink: 0; padding: 6px 14px; border-radius: 16px; background: var(--card);
+  border: 1px solid #eee; font-size: 0.85rem; cursor: pointer;
+}
+.tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+.menu-list { padding: 8px 14px; }
+.category-title { margin: 18px 0 8px; font-size: 1.05rem; }
+.item-card {
+  background: var(--card); border-radius: 12px; padding: 12px;
+  display: flex; justify-content: space-between; gap: 10px;
+  margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.item-info { flex: 1; }
+.item-name { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.veg-dot, .nonveg-dot {
+  width: 10px; height: 10px; border-radius: 2px; display: inline-block; border: 1.5px solid;
+}
+.veg-dot { border-color: var(--veg); }
+.veg-dot::after { content: ""; display: block; width: 5px; height: 5px; margin: 1px; border-radius: 50%; background: var(--veg); }
+.nonveg-dot { border-color: var(--nonveg); }
+.nonveg-dot::after { content: ""; display: block; width: 5px; height: 5px; margin: 1px; border-radius: 50%; background: var(--nonveg); }
+.item-desc { font-size: 0.8rem; color: var(--muted); margin: 4px 0; }
+.item-price { font-weight: 600; margin-top: 6px; }
+.item-card.out-of-stock { opacity: 0.55; }
+.oos-badge {
+  font-size: 0.72rem; color: var(--nonveg); border: 1px solid var(--nonveg);
+  padding: 4px 8px; border-radius: 8px; white-space: nowrap;
+}
+.item-actions { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.add-btn {
+  background: var(--primary); color: white; border: none; border-radius: 8px;
+  padding: 6px 14px; font-size: 0.85rem; cursor: pointer;
+}
+.qty-control { display: flex; align-items: center; gap: 8px; }
+.qty-control button {
+  width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--primary);
+  background: white; color: var(--primary); font-size: 1rem; cursor: pointer;
+}
+.cart-drawer {
+  position: fixed; bottom: 0; left: 0; right: 0; background: white;
+  border-radius: 16px 16px 0 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
+  max-height: 75vh; display: flex; flex-direction: column; z-index: 20;
+  transition: transform 0.25s ease;
+}
+.cart-drawer.hidden { transform: translateY(110%); }
+.cart-header { display: flex; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #eee; }
+.cart-header button { border: none; background: none; font-size: 1.2rem; cursor: pointer; }
+.cart-items { padding: 10px 18px; overflow-y: auto; flex: 1; }
+.cart-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f2f2f2; align-items: center; }
+#customerName { margin: 10px 18px 0; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 0.95rem; }
+#orderNote { margin: 10px 18px; padding: 8px; border-radius: 8px; border: 1px solid #ddd; resize: none; height: 50px; }
+.cart-footer { padding: 14px 18px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.cart-total { font-weight: 700; font-size: 1.1rem; }
+.place-order-btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-size: 1rem; cursor: pointer; }
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: #2b2b2b; color: white; padding: 10px 18px; border-radius: 8px; z-index: 30;
+}
+.toast.hidden { display: none; }

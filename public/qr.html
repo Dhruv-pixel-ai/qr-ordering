@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Table QR Codes</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #f4f4f6; margin: 0; padding: 24px; }
+  h1 { text-align: center; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+  .card { background: white; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .card img { width: 100%; max-width: 220px; }
+  .card h2 { margin: 8px 0 0; }
+  .top-actions { text-align: center; margin-bottom: 20px; }
+  button { padding: 8px 16px; border-radius: 8px; border: none; background: #d9480f; color: white; cursor: pointer; }
+  @media print { .top-actions { display: none; } }
+</style>
+</head>
+<body>
+  <h1>📱 Table QR Codes</h1>
+  <div class="top-actions"><button onclick="window.print()">Print All</button></div>
+  <div class="grid" id="grid"></div>
+  <script>
+    async function load() {
+      const cfg = await fetch("/api/config").then(r => r.json());
+      const grid = document.getElementById("grid");
+      grid.innerHTML = Array.from({ length: cfg.totalTables }, (_, i) => i + 1)
+        .map(t => `
+          <div class="card">
+            <img src="/api/qrcode/${t}" alt="QR Table ${t}" />
+            <h2>Table ${t}</h2>
+          </div>
+        `).join("");
+    }
+    load();
+  </script>
+</body>
+</html>

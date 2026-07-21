@@ -1,0 +1,106 @@
+:root {
+  --primary: #d9480f;
+  --bg: #f4f4f6;
+  --card: #ffffff;
+  --pending: #f08c00;
+  --preparing: #1c7ed6;
+  --ready: #2f9e44;
+  --served: #868e96;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); }
+.topbar {
+  background: #1b1b1f; color: white; padding: 16px 24px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.topbar h1 { margin: 0; font-size: 1.3rem; }
+.header-right { display: flex; align-items: center; gap: 14px; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; background: #2f9e44; display: inline-block; }
+.link-btn { color: white; background: var(--primary); padding: 6px 14px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; }
+.tables-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px; padding: 20px;
+}
+.table-card {
+  background: var(--card); border-radius: 14px; padding: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 10px;
+}
+.table-card.empty { opacity: 0.5; }
+.table-card-header { display: flex; justify-content: space-between; align-items: center; }
+.table-card-header h2 { margin: 0; font-size: 1.1rem; }
+.order-block { border: 1px solid #eee; border-radius: 10px; padding: 10px; }
+.order-block-header { display: flex; justify-content: space-between; font-size: 0.75rem; color: #888; margin-bottom: 6px; }
+.order-item-row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 2px 0; }
+.source-badge {
+  font-size: 0.7rem; padding: 3px 10px; border-radius: 12px; color: white; font-weight: 600;
+  background: #495057;
+}
+.customer-name {
+  font-size: 0.85rem; font-weight: 600; color: var(--primary); margin-bottom: 4px;
+}
+.table-footer { display: flex; gap: 8px; margin-top: auto; }
+.bill-btn, .clear-btn {
+  flex: 1; padding: 8px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem;
+}
+.bill-btn { background: var(--primary); color: white; }
+.clear-btn { background: #e9ecef; }
+.table-total { font-weight: 700; font-size: 1rem; text-align: right; }
+
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.modal.hidden { display: none; }
+.modal-content {
+  background: white; padding: 20px; border-radius: 10px; width: 320px;
+  max-height: 88vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+
+/* ---------- Receipt / KOT styling ---------- */
+.receipt {
+  font-family: "Courier New", Courier, monospace;
+  color: #1a1a1a; font-size: 0.82rem;
+}
+.receipt-header { text-align: center; margin-bottom: 4px; }
+.receipt-brand { font-size: 1.05rem; font-weight: 800; letter-spacing: 0.5px; }
+.receipt-address { font-size: 0.72rem; color: #444; margin-top: 3px; line-height: 1.3; }
+.receipt-phone { font-size: 0.72rem; color: #444; margin-top: 2px; }
+.receipt-divider {
+  border-top: 1px dashed #999; margin: 8px 0;
+}
+.receipt-meta { display: flex; justify-content: space-between; font-size: 0.75rem; color: #333; }
+.receipt-items { margin: 2px 0; }
+.receipt-item-row { display: flex; gap: 4px; padding: 2px 0; }
+.receipt-item-head { font-weight: 700; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+.ri-name { flex: 1; }
+.ri-qty { width: 28px; text-align: center; }
+.ri-amt { width: 56px; text-align: right; }
+.receipt-totals .receipt-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 0.8rem; }
+.receipt-grand-total { font-weight: 800; font-size: 0.95rem; border-top: 1px dashed #999; margin-top: 4px; padding-top: 6px; }
+.receipt-footer { text-align: center; font-size: 0.8rem; margin-top: 4px; }
+
+.modal-actions { margin-top: 16px; display: flex; gap: 8px; }
+.modal-actions button {
+  flex: 1; padding: 9px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem;
+  background: #eee;
+}
+.modal-actions button:first-child { background: var(--primary); color: white; }
+
+/* ---------- Print: thermal KOT receipt paper, not A4 ---------- */
+@page {
+  size: 80mm auto;
+  margin: 0;
+}
+@media print {
+  body * { visibility: hidden; }
+  .modal, .modal-content, .modal-content * { visibility: visible; }
+  .modal { position: static; background: none; }
+  .modal-content {
+    position: absolute; top: 0; left: 0; width: 80mm;
+    max-height: none; overflow: visible;
+    box-shadow: none; border-radius: 0; padding: 4mm;
+  }
+  .receipt { font-size: 11px; }
+  .receipt-brand { font-size: 14px; }
+  .modal-actions { display: none !important; }
+}

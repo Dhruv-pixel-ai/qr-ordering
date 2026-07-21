@@ -1,0 +1,758 @@
+[
+  {
+    "id": "dv1",
+    "category": "Dabeli / Vadapav / Puff",
+    "name": "Dabeli (Oil)",
+    "price": 30,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "dv2",
+    "category": "Dabeli / Vadapav / Puff",
+    "name": "Dabeli (Butter)",
+    "price": 35,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "dv3",
+    "category": "Dabeli / Vadapav / Puff",
+    "name": "Dabeli (Cheese)",
+    "price": 40,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "dv4",
+    "category": "Dabeli / Vadapav / Puff",
+    "name": "Vadapav (Oil)",
+    "price": 30,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "dv5",
+    "category": "Dabeli / Vadapav / Puff",
+    "name": "Vadapav (Butter)",
+    "price": 35,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "dv6",
+    "category": "Dabeli / Vadapav / Puff",
+    "name": "Vadapav (Cheese)",
+    "price": 40,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "dv7",
+    "category": "Dabeli / Vadapav / Puff",
+    "name": "Puff (Oil)",
+    "price": 25,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "dv8",
+    "category": "Dabeli / Vadapav / Puff",
+    "name": "Puff (Butter)",
+    "price": 30,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "dv9",
+    "category": "Dabeli / Vadapav / Puff",
+    "name": "Puff (Cheese)",
+    "price": 40,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pz1",
+    "category": "Pizza (Small)",
+    "name": "Margherita Pizza",
+    "price": 120,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pz2",
+    "category": "Pizza (Small)",
+    "name": "American Corn Pizza",
+    "price": 130,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pz3",
+    "category": "Pizza (Small)",
+    "name": "Mexican Tex-Mex Pizza",
+    "price": 150,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pz4",
+    "category": "Pizza (Small)",
+    "name": "Farm Fresh Pizza",
+    "price": 150,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pz5",
+    "category": "Pizza (Small)",
+    "name": "Mushroom Pizza",
+    "price": 150,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pz6",
+    "category": "Pizza (Small)",
+    "name": "Extra Cheese Pizza",
+    "price": 160,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pz7",
+    "category": "Pizza (Small)",
+    "name": "Makhani Paneer Pizza",
+    "price": 170,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pz8",
+    "category": "Pizza (Small)",
+    "name": "Spicy Schezwan Pizza",
+    "price": 170,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pz9",
+    "category": "Pizza (Small)",
+    "name": "Peri Peri Pizza",
+    "price": 160,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "kr1",
+    "category": "Kathi Roll",
+    "name": "Veg Kathi Roll",
+    "price": 70,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "kr2",
+    "category": "Kathi Roll",
+    "name": "Potato Kathi Roll",
+    "price": 80,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "kr3",
+    "category": "Kathi Roll",
+    "name": "Paneer Kathi Roll",
+    "price": 90,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "kr4",
+    "category": "Kathi Roll",
+    "name": "Chowmein Kathi Roll",
+    "price": 90,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ps1",
+    "category": "Pasta",
+    "name": "Red Sauce Pasta",
+    "price": 120,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ps2",
+    "category": "Pasta",
+    "name": "White Sauce Pasta",
+    "price": 130,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ps3",
+    "category": "Pasta",
+    "name": "Pesto Pasta",
+    "price": 140,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ps4",
+    "category": "Pasta",
+    "name": "Spaghetti",
+    "price": 140,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sw1",
+    "category": "Sandwich",
+    "name": "Plain Sandwich",
+    "price": 40,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sw2",
+    "category": "Sandwich",
+    "name": "Vegetable Sandwich",
+    "price": 40,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sw3",
+    "category": "Sandwich",
+    "name": "Cheese Butter Jam Sandwich",
+    "price": 50,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sw4",
+    "category": "Sandwich",
+    "name": "Grilled Vegetable Sandwich",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sw5",
+    "category": "Sandwich",
+    "name": "Aloo Mutter Sandwich",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sw6",
+    "category": "Sandwich",
+    "name": "Corn Cheese Sandwich",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sw7",
+    "category": "Sandwich",
+    "name": "Plain Cheese Sandwich",
+    "price": 40,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sw8",
+    "category": "Sandwich",
+    "name": "Peri Peri Sandwich",
+    "price": 140,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sw9",
+    "category": "Sandwich",
+    "name": "Bombay Sandwich",
+    "price": 150,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sw10",
+    "category": "Sandwich",
+    "name": "Cheese Chilli Toast",
+    "price": 150,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sw11",
+    "category": "Sandwich",
+    "name": "Club Sandwich",
+    "price": 160,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bg1",
+    "category": "Burgers",
+    "name": "Aloo Tikki Burger (Regular)",
+    "price": 50,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bg2",
+    "category": "Burgers",
+    "name": "Aloo Tikki Burger (Cheese)",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bg3",
+    "category": "Burgers",
+    "name": "Veg Cheese Burger (Regular)",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bg4",
+    "category": "Burgers",
+    "name": "Veg Cheese Burger (Cheese)",
+    "price": 90,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bg5",
+    "category": "Burgers",
+    "name": "Paneer Burger (Regular)",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bg6",
+    "category": "Burgers",
+    "name": "Paneer Burger (Cheese)",
+    "price": 90,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bg7",
+    "category": "Burgers",
+    "name": "Veg Peri Peri Burger (Regular)",
+    "price": 80,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bg8",
+    "category": "Burgers",
+    "name": "Veg Peri Peri Burger (Cheese)",
+    "price": 110,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bg9",
+    "category": "Burgers",
+    "name": "Mexican Burger (Regular)",
+    "price": 80,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bg10",
+    "category": "Burgers",
+    "name": "Mexican Burger (Cheese)",
+    "price": 110,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "gb1",
+    "category": "Garlic Bread (4 pcs)",
+    "name": "Classic Garlic Bread",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "gb2",
+    "category": "Garlic Bread (4 pcs)",
+    "name": "Corn Cheese Garlic Bread",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "gb3",
+    "category": "Garlic Bread (4 pcs)",
+    "name": "Deluxe Garlic Bread",
+    "price": 70,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "gb4",
+    "category": "Garlic Bread (4 pcs)",
+    "name": "Peri Peri Garlic Bread",
+    "price": 80,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "gb5",
+    "category": "Garlic Bread (4 pcs)",
+    "name": "Paneer Garlic Bread",
+    "price": 80,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bv1",
+    "category": "Beverages",
+    "name": "Cold Coffee",
+    "price": 70,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bv2",
+    "category": "Beverages",
+    "name": "Mojito",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bv3",
+    "category": "Beverages",
+    "name": "Lemon Ice",
+    "price": 55,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "bv4",
+    "category": "Beverages",
+    "name": "Bournvita",
+    "price": 50,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sn1",
+    "category": "Snacks",
+    "name": "Veg Maggi",
+    "price": 40,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sn2",
+    "category": "Snacks",
+    "name": "Cheese Maggi",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sn3",
+    "category": "Snacks",
+    "name": "French Fries",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "sn4",
+    "category": "Snacks",
+    "name": "Peri Peri French Fries",
+    "price": 80,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ch1",
+    "category": "Chinese",
+    "name": "Noodles (Half)",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ch2",
+    "category": "Chinese",
+    "name": "Noodles (Full)",
+    "price": 90,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ch3",
+    "category": "Chinese",
+    "name": "Manchurian (Half)",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ch4",
+    "category": "Chinese",
+    "name": "Manchurian (Full)",
+    "price": 90,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ch5",
+    "category": "Chinese",
+    "name": "Rice Noodles (Full)",
+    "price": 90,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ch6",
+    "category": "Chinese",
+    "name": "Paneer Chilli Dry (Full)",
+    "price": 90,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ch7",
+    "category": "Chinese",
+    "name": "Schezwan Noodles (Full)",
+    "price": 100,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "ch8",
+    "category": "Chinese",
+    "name": "Veg Noodles (Full)",
+    "price": 100,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pb1",
+    "category": "Pav Bhaji",
+    "name": "Pav Bhaji (Half)",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pb2",
+    "category": "Pav Bhaji",
+    "name": "Pav Bhaji (Full)",
+    "price": 100,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pb3",
+    "category": "Pav Bhaji",
+    "name": "Pav Bhaji (Butter)",
+    "price": 110,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pb4",
+    "category": "Pav Bhaji",
+    "name": "Pav Bhaji (Cheese)",
+    "price": 140,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pb5",
+    "category": "Pav Bhaji",
+    "name": "Pulav (Half)",
+    "price": 60,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "pb6",
+    "category": "Pav Bhaji",
+    "name": "Pulav (Full)",
+    "price": 90,
+    "veg": true,
+    "desc": "",
+    "inStock": true
+  },
+  {
+    "id": "cd1",
+    "category": "Cold Drinks",
+    "name": "Pepsi",
+    "price": 20,
+    "veg": true,
+    "desc": "Price to be updated",
+    "inStock": true
+  },
+  {
+    "id": "cd2",
+    "category": "Cold Drinks",
+    "name": "Coca-Cola",
+    "price": 20,
+    "veg": true,
+    "desc": "Price to be updated",
+    "inStock": true
+  },
+  {
+    "id": "cd3",
+    "category": "Cold Drinks",
+    "name": "Thums Up",
+    "price": 20,
+    "veg": true,
+    "desc": "Price to be updated",
+    "inStock": true
+  },
+  {
+    "id": "cd4",
+    "category": "Cold Drinks",
+    "name": "Sprite",
+    "price": 20,
+    "veg": true,
+    "desc": "Price to be updated",
+    "inStock": true
+  },
+  {
+    "id": "cd5",
+    "category": "Cold Drinks",
+    "name": "Fanta",
+    "price": 20,
+    "veg": true,
+    "desc": "Price to be updated",
+    "inStock": true
+  },
+  {
+    "id": "cd6",
+    "category": "Cold Drinks",
+    "name": "Red Bull",
+    "price": 20,
+    "veg": true,
+    "desc": "Price to be updated",
+    "inStock": true
+  },
+  {
+    "id": "cd7",
+    "category": "Cold Drinks",
+    "name": "Sting",
+    "price": 20,
+    "veg": true,
+    "desc": "Price to be updated",
+    "inStock": true
+  },
+  {
+    "id": "cd8",
+    "category": "Cold Drinks",
+    "name": "Monster",
+    "price": 20,
+    "veg": true,
+    "desc": "Price to be updated",
+    "inStock": true
+  },
+  {
+    "id": "cd9",
+    "category": "Cold Drinks",
+    "name": "Buttermilk",
+    "price": 20,
+    "veg": true,
+    "desc": "Price to be updated",
+    "inStock": true
+  },
+  {
+    "id": "cd10",
+    "category": "Cold Drinks",
+    "name": "Mango Shake",
+    "price": 20,
+    "veg": true,
+    "desc": "Price to be updated",
+    "inStock": true
+  }
+]

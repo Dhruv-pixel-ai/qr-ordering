@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>THE KD'S CAFE — Dashboard</title>
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>👨‍🍳 Restaurant Dashboard</h1>
+    <div class="header-right">
+      <span id="connStatus" class="status-dot"></span>
+      <a href="/menu-manager.html" class="link-btn">Manage Menu</a>
+      <a href="/waiter.html" class="link-btn">Take Order (Waiter)</a>
+      <a href="/qr.html" class="link-btn">Table QR Codes</a>
+    </div>
+  </header>
+
+  <main id="tablesGrid" class="tables-grid"></main>
+
+  <div id="billModal" class="modal hidden">
+    <div class="modal-content" id="billContent"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Menu Manager</title>
+<link rel="stylesheet" href="admin.css" />
+<link rel="stylesheet" href="menu-manager.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>🧾 Menu Manager</h1>
+    <div class="header-right">
+      <a href="/admin.html" class="link-btn">Back to Dashboard</a>
+    </div>
+  </header>
+
+  <section class="add-item-bar">
+    <h2>Billing Settings</h2>
+    <div class="add-item-form" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="businessNameInput" placeholder="Café / Restaurant name" style="flex:2;min-width:200px;" />
+        <input id="phoneInput" placeholder="Phone number(s)" style="flex:1;min-width:160px;" />
+      </div>
+      <textarea id="addressInput" placeholder="Address (shown on bill)" style="margin-top:8px;padding:8px;border-radius:8px;border:1px solid #ddd;resize:none;height:44px;"></textarea>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;">
+          GST %
+          <input id="gstInput" type="number" min="0" step="0.1" style="width:90px;" />
+        </label>
+        <button id="saveGstBtn">Save Settings</button>
+        <span id="gstSavedNote" style="font-size:0.8rem;color:#888;"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="add-item-bar">
+    <h2>Add New Item</h2>
+    <div class="add-item-form">
+      <input id="newCategory" list="categoryList" placeholder="Category (e.g. Pizza (Small))" />
+      <datalist id="categoryList"></datalist>
+      <input id="newName" placeholder="Item name" />
+      <input id="newPrice" type="number" placeholder="Price (₹)" />
+      <select id="newVeg">
+        <option value="true">Veg</option>
+        <option value="false">Non-Veg</option>
+      </select>
+      <input id="newDesc" placeholder="Description (optional)" />
+      <button id="addItemBtn">+ Add Item</button>
+    </div>
+  </section>
+
+  <main id="menuManagerList" class="mm-list"></main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="menu-manager.js"></script>
+</body>
+</html>

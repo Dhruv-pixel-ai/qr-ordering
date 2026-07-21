@@ -1,0 +1,11 @@
+.waiter-fields {
+  background: white; padding: 14px 18px; display: flex; gap: 12px; flex-wrap: wrap;
+  border-bottom: 1px solid #eee; position: sticky; top: 58px; z-index: 9;
+}
+.waiter-fields label {
+  display: flex; flex-direction: column; font-size: 0.75rem; color: #666; flex: 1; min-width: 120px; gap: 4px;
+}
+.waiter-fields input, .waiter-fields select {
+  padding: 8px; border-radius: 8px; border: 1px solid #ddd; font-size: 0.9rem;
+}
+.tabs { top: 128px; }
