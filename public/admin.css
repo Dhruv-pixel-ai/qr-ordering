@@ -124,14 +124,36 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
   margin: 0;
 }
 @media print {
-  body * { visibility: hidden; }
-  .modal, .modal-content, .modal-content * { visibility: visible; }
-  .modal { position: static; background: none; }
-  .modal-content {
-    position: absolute; top: 0; left: 0; width: 80mm;
-    max-height: none; overflow: visible;
-    box-shadow: none; border-radius: 0; padding: 4mm;
+  /* Use display:none, NOT visibility:hidden. A visibility:hidden element is
+     invisible but STILL occupies its full layout box, so the 20-card tables
+     grid kept reserving ~3 extra pages of empty height behind the receipt —
+     that is what made every bill print as 4 sheets and made the thermal
+     printer slow (each blank sheet is still rasterised and fed).            */
+  body > *:not(#billModal) { display: none !important; }
+
+  /* Collapse the page box to exactly the receipt height. */
+  html, body {
+    width: 80mm;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff;
   }
+
+  #billModal {
+    display: block !important;
+    position: static; inset: auto;
+    background: none;
+    height: auto; min-height: 0;
+  }
+  .modal-content {
+    position: static; width: 80mm;
+    max-height: none; overflow: visible;
+    box-shadow: none; border-radius: 0; padding: 4mm; margin: 0;
+  }
+  /* Never let the receipt be split across two lengths of paper. */
+  .receipt { page-break-inside: avoid; break-inside: avoid; }
   /* Bigger + fully black on paper so the customer can actually read it. */
   .receipt { font-size: 13px; font-weight: 700; color: #000; }
   .receipt-brand { font-size: 17px; font-weight: 900; }
