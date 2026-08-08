@@ -1,7 +1,10 @@
 const params = new URLSearchParams(window.location.search);
 const table = params.get("table") || "1";
 
-const socket = io();
+// Socket.IO is optional: on serverless hosting the client script may not
+// load at all. Referencing a missing `io` throws and kills this entire
+// script, so guard it and null-check every listener below.
+const socket = typeof io !== "undefined" ? io() : null;
 let menu = [];
 let cart = {}; // id -> {item, qty}
 let activeCategory = null;
@@ -60,7 +63,7 @@ async function loadMenu() {
 
 // Live-reflect price changes, new items, removed items, and out-of-stock
 // toggles made from the Menu Manager dashboard — no refresh needed.
-socket.on("menu_updated", (updatedMenu) => {
+socket && socket.on("menu_updated", (updatedMenu) => {
   menu = updatedMenu;
   pruneCartOfMissingOrOutOfStockItems();
   renderTabs();

@@ -20,6 +20,20 @@ const BASE_URL = process.env.BASE_URL || "";
 let db; // set in start()
 
 app.use(express.json());
+
+// ---------- No caching on API responses ----------
+// The dashboard polls /api/orders every couple of seconds. Without this, the
+// browser (and Vercel's edge) answer 304/from-cache and the kitchen sees a
+// stale order list — new orders appear late or not at all. ETags are disabled
+// for the same reason.
+app.set("etag", false);
+app.use("/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  next();
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 // ---------- helpers ----------
@@ -253,8 +267,22 @@ app.post("/api/tables/:table/clear", ah(async (req, res) => {
 }));
 
 // ---------- API: QR code image for a table ----------
+// Resolve the public base URL for QR codes:
+// 1. BASE_URL env variable (explicit override, e.g. https://www.kds-cafe.com)
+// 2. The host the request actually came in on (works on any domain, no env needed)
+// 3. LAN IP fallback (local WiFi use)
+function getPublicBase(req) {
+  if (BASE_URL) return BASE_URL.replace(/\/+$/, "");
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  if (host && !host.startsWith("localhost") && !host.startsWith("127.")) {
+    const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    return `${proto.split(",")[0].trim()}://${host.split(",")[0].trim()}`;
+  }
+  return `http://${getLocalIP()}:${PORT}`;
+}
+
 app.get("/api/qrcode/:table", ah(async (req, res) => {
-  const base = BASE_URL || `http://${getLocalIP()}:${PORT}`;
+  const base = getPublicBase(req);
   const url = `${base}/menu.html?table=${req.params.table}`;
   try {
     const png = await QRCode.toBuffer(url, { width: 300, margin: 2 });

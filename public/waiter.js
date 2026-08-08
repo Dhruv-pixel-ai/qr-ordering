@@ -1,4 +1,7 @@
-const socket = io();
+// Socket.IO is optional: on serverless hosting the client script may not
+// load at all. Referencing a missing `io` throws and kills this entire
+// script, so guard it and null-check every listener below.
+const socket = typeof io !== "undefined" ? io() : null;
 let menu = [];
 let cart = {}; // id -> {item, qty}
 let activeCategory = null;
@@ -19,7 +22,7 @@ async function init() {
 }
 
 // Live-reflect Menu Manager changes (price, new/removed items, stock).
-socket.on("menu_updated", (updatedMenu) => {
+socket && socket.on("menu_updated", (updatedMenu) => {
   menu = updatedMenu;
   Object.keys(cart).forEach((id) => {
     const stillThere = menu.find((m) => m.id === id && m.inStock);

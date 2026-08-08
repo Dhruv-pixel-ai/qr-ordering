@@ -56,28 +56,60 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
   max-height: 88vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
 }
 
-/* ---------- Receipt / KOT styling ---------- */
+/* ---------- Receipt / KOT styling ----------
+   Everything here is deliberately pure black and bold. The previous version
+   used grey (#444 text, #999 dashed rules) which printed almost invisibly on
+   thermal and low-toner printers — customers could not read their bill.
+   print-color-adjust:exact stops browsers from lightening it further.        */
 .receipt {
   font-family: "Courier New", Courier, monospace;
-  color: #1a1a1a; font-size: 0.82rem;
+  color: #000;
+  font-size: 0.9rem;
+  font-weight: 700;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
-.receipt-header { text-align: center; margin-bottom: 4px; }
-.receipt-brand { font-size: 1.05rem; font-weight: 800; letter-spacing: 0.5px; }
-.receipt-address { font-size: 0.72rem; color: #444; margin-top: 3px; line-height: 1.3; }
-.receipt-phone { font-size: 0.72rem; color: #444; margin-top: 2px; }
+.receipt-header { text-align: center; margin-bottom: 6px; }
+.receipt-brand {
+  font-size: 1.25rem; font-weight: 900; letter-spacing: 0.5px; color: #000;
+}
+.receipt-address { font-size: 0.8rem; color: #000; font-weight: 700; margin-top: 4px; line-height: 1.35; }
+.receipt-phone { font-size: 0.8rem; color: #000; font-weight: 700; margin-top: 3px; }
 .receipt-divider {
-  border-top: 1px dashed #999; margin: 8px 0;
+  border-top: 2px solid #000; margin: 8px 0;
 }
-.receipt-meta { display: flex; justify-content: space-between; font-size: 0.75rem; color: #333; }
+.receipt-meta {
+  display: flex; justify-content: space-between;
+  font-size: 0.8rem; color: #000; font-weight: 700;
+}
 .receipt-items { margin: 2px 0; }
-.receipt-item-row { display: flex; gap: 4px; padding: 2px 0; }
-.receipt-item-head { font-weight: 700; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+.receipt-item-row {
+  display: flex; gap: 4px; padding: 3px 0;
+  font-weight: 700; color: #000;
+}
+.receipt-item-head {
+  font-weight: 900; border-bottom: 2px solid #000; padding-bottom: 4px;
+}
 .ri-name { flex: 1; }
-.ri-qty { width: 28px; text-align: center; }
-.ri-amt { width: 56px; text-align: right; }
-.receipt-totals .receipt-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 0.8rem; }
-.receipt-grand-total { font-weight: 800; font-size: 0.95rem; border-top: 1px dashed #999; margin-top: 4px; padding-top: 6px; }
-.receipt-footer { text-align: center; font-size: 0.8rem; margin-top: 4px; }
+.ri-qty { width: 30px; text-align: center; }
+.ri-amt { width: 62px; text-align: right; }
+.receipt-totals .receipt-row {
+  display: flex; justify-content: space-between; padding: 3px 0;
+  font-size: 0.88rem; font-weight: 700; color: #000;
+}
+.receipt-grand-total {
+  font-weight: 900 !important; font-size: 1.1rem !important;
+  border-top: 2px solid #000; border-bottom: 2px solid #000;
+  margin-top: 5px; padding: 6px 0;
+}
+.receipt-footer { text-align: center; font-size: 0.85rem; font-weight: 700; color: #000; margin-top: 6px; }
+
+/* Banner telling staff to click once so the browser allows the beep. */
+.sound-banner {
+  margin: 12px 20px 0; padding: 10px 14px; border-radius: 8px;
+  background: #fff3bf; border: 1px solid #f08c00; color: #663c00;
+  font-size: 0.85rem; font-weight: 600; text-align: center; cursor: pointer;
+}
 
 .modal-actions { margin-top: 16px; display: flex; gap: 8px; }
 .modal-actions button {
@@ -100,7 +132,14 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
     max-height: none; overflow: visible;
     box-shadow: none; border-radius: 0; padding: 4mm;
   }
-  .receipt { font-size: 11px; }
-  .receipt-brand { font-size: 14px; }
+  /* Bigger + fully black on paper so the customer can actually read it. */
+  .receipt { font-size: 13px; font-weight: 700; color: #000; }
+  .receipt-brand { font-size: 17px; font-weight: 900; }
+  .receipt-address, .receipt-phone, .receipt-meta { font-size: 11px; font-weight: 700; color: #000; }
+  .receipt-item-row { font-size: 13px; font-weight: 700; color: #000; }
+  .receipt-grand-total { font-size: 15px !important; font-weight: 900 !important; }
+  .receipt-divider { border-top: 2px solid #000; }
+  .sound-banner { display: none !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   .modal-actions { display: none !important; }
 }

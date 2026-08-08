@@ -1,4 +1,7 @@
-const socket = io();
+// Socket.IO is optional: on serverless hosting the client script may not
+// load at all. Referencing a missing `io` throws and kills this entire
+// script, so guard it and null-check every listener below.
+const socket = typeof io !== "undefined" ? io() : null;
 let menu = [];
 
 async function init() {
@@ -33,7 +36,7 @@ document.getElementById("saveGstBtn").addEventListener("click", async () => {
   }
 });
 
-socket.on("settings_updated", (settings) => {
+socket && socket.on("settings_updated", (settings) => {
   // Don't overwrite fields while someone is actively typing in this tab.
   const active = document.activeElement;
   const formIds = ["gstInput", "businessNameInput", "phoneInput", "addressInput"];
@@ -44,7 +47,7 @@ socket.on("settings_updated", (settings) => {
 
 // Live updates from other devices/tabs (waiter app, customer menu, or another
 // manager tab) all flow through this same event.
-socket.on("menu_updated", (updatedMenu) => {
+socket && socket.on("menu_updated", (updatedMenu) => {
   menu = updatedMenu;
   // Don't yank the list out from under someone who is mid-edit in a text field.
   const activeInList = document.activeElement && document.getElementById("menuManagerList").contains(document.activeElement);
