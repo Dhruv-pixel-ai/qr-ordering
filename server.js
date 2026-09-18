@@ -5,6 +5,7 @@ const { Server } = require("socket.io");
 const path = require("path");
 const QRCode = require("qrcode");
 const os = require("os");
+const crypto = require("crypto");
 const { initDb } = require("./db");
 
 const app = express();
@@ -16,6 +17,24 @@ const TOTAL_TABLES = Number(process.env.TOTAL_TABLES) || 50;
 // When hosted publicly, set BASE_URL (e.g. https://kdscafe.example.com) so table
 // QR codes point at the public address instead of the machine's LAN IP.
 const BASE_URL = process.env.BASE_URL || "";
+// PIN for the confidential daily-collection page. No default: if this is unset
+// the counter endpoint refuses to answer rather than falling back to a
+// guessable value.
+const COUNTER_PIN = process.env.COUNTER_PIN || "";
+// The day a sale belongs to is decided in the cafe's own timezone. Using UTC
+// would roll the day over at 5:30 AM IST and split a night's takings across
+// two dates.
+const CAFE_TZ = process.env.CAFE_TZ || "Asia/Kolkata";
+
+// YYYY-MM-DD in the cafe's timezone. 'en-CA' formats as 2026-09-19.
+function dayKey(d = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: CAFE_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
 
 let db; // set in start()
 
@@ -259,11 +278,104 @@ app.post("/api/tables/:table/finalize", ah(async (req, res) => {
 }));
 
 // ---------- API: clear a table (reset for next customer) ----------
+// Clearing a table is the moment the money is considered collected, so this is
+// where the day's counter is incremented. Only a single running total per day
+// is stored - no items, no order count, no customer names.
 app.post("/api/tables/:table/clear", ah(async (req, res) => {
   const table = Number(req.params.table);
+
+  const tableOrders = await db.collection("orders").find({ table }, NO_ID).toArray();
+  const subtotal = tableOrders.reduce(
+    (sum, o) => sum + o.items.reduce((s, it) => s + it.price * it.qty, 0),
+    0
+  );
+
+  if (subtotal > 0) {
+    const settings = await loadSettings();
+    const gstPercent = settings.gstPercent;
+    const tax = Math.round(subtotal * (gstPercent / 100) * 100) / 100;
+    const collected = Math.round((subtotal + tax) * 100) / 100;
+    const key = dayKey();
+    // $inc on one document per day: the total is all that is kept.
+    await db.collection("daily_totals").updateOne(
+      { key },
+      { $inc: { total: collected }, $set: { updatedAt: new Date().toISOString() } },
+      { upsert: true }
+    );
+  }
+
   await db.collection("orders").deleteMany({ table });
   io.emit("table_cleared", { table });
   res.json({ success: true });
+}));
+
+// ---------- API: daily counter (PIN protected) ----------
+// Returns amounts only. Deliberately exposes no order details.
+function checkPin(supplied) {
+  if (!COUNTER_PIN) return { ok: false, code: 503, error: "Counter PIN is not configured on the server." };
+  const a = Buffer.from(String(supplied || ""));
+  const b = Buffer.from(COUNTER_PIN);
+  // Compare in constant time, and only when lengths match (timingSafeEqual
+  // throws on differing lengths).
+  const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (!ok) return { ok: false, code: 401, error: "Incorrect PIN." };
+  return { ok: true };
+}
+
+// Small in-memory throttle to slow down PIN guessing. Note: on serverless each
+// instance has its own copy, so this is a speed bump, not a hard limit - the
+// real protection is a long PIN.
+const pinAttempts = new Map();
+function throttled(ip) {
+  const now = Date.now();
+  const rec = pinAttempts.get(ip) || { n: 0, first: now };
+  if (now - rec.first > 10 * 60 * 1000) {
+    pinAttempts.set(ip, { n: 1, first: now });
+    return false;
+  }
+  rec.n += 1;
+  pinAttempts.set(ip, rec);
+  return rec.n > 12;
+}
+
+async function totalFor(key) {
+  const doc = await db.collection("daily_totals").findOne({ key }, NO_ID);
+  return Math.round(((doc && doc.total) || 0) * 100) / 100;
+}
+
+app.post("/api/counter", ah(async (req, res) => {
+  const ip = req.headers["x-forwarded-for"] || req.ip || "unknown";
+  if (throttled(String(ip).split(",")[0].trim())) {
+    return res.status(429).json({ error: "Too many attempts. Please wait a few minutes." });
+  }
+  const check = checkPin(req.body && req.body.pin);
+  if (!check.ok) return res.status(check.code).json({ error: check.error });
+
+  // Optional explicit date (YYYY-MM-DD), else today in the cafe's timezone.
+  const date = /^\d{4}-\d{2}-\d{2}$/.test((req.body && req.body.date) || "")
+    ? req.body.date
+    : dayKey();
+
+  const prev = new Date(`${date}T12:00:00Z`);
+  prev.setUTCDate(prev.getUTCDate() - 1);
+  const prevKey = dayKey(prev);
+
+  // Month-to-date for the month the requested date falls in.
+  const monthPrefix = date.slice(0, 7);
+  const monthDocs = await db
+    .collection("daily_totals")
+    .find({ key: { $regex: `^${monthPrefix}` } }, NO_ID)
+    .toArray();
+  const monthTotal =
+    Math.round(monthDocs.reduce((s, d) => s + (d.total || 0), 0) * 100) / 100;
+
+  res.json({
+    date,
+    today: await totalFor(date),
+    yesterday: await totalFor(prevKey),
+    month: monthTotal,
+    monthLabel: monthPrefix,
+  });
 }));
 
 // ---------- API: QR code image for a table ----------

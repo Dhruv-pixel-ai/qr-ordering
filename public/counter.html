@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Counter</title>
+<style>
+  :root { --primary: #d9480f; --bg: #12100f; --card: #1e1b1a; --text: #f5f1ee; --muted: #9a918c; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .wrap { width: 100%; max-width: 420px; }
+  .card {
+    background: var(--card); border-radius: 16px; padding: 26px 22px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  }
+  h1 { margin: 0 0 4px; font-size: 1.15rem; }
+  .sub { margin: 0 0 20px; color: var(--muted); font-size: 0.82rem; }
+  input {
+    width: 100%; padding: 13px; border-radius: 10px; border: 1.5px solid #3a3533;
+    background: #171413; color: var(--text); font-size: 1rem; text-align: center;
+    letter-spacing: 3px;
+  }
+  input:focus { outline: none; border-color: var(--primary); }
+  button {
+    width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 10px;
+    background: var(--primary); color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .err { color: #ff8787; font-size: 0.85rem; margin-top: 12px; text-align: center; min-height: 1.1em; }
+  .hidden { display: none; }
+
+  .amount-big { font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; }
+  .amount-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+  .today { text-align: center; padding: 10px 0 18px; }
+  .row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 12px 0; border-top: 1px solid #2c2725;
+  }
+  .row span:last-child { font-size: 1.15rem; font-weight: 700; }
+  .date-pick { display: flex; gap: 8px; margin-top: 18px; }
+  .date-pick input {
+    letter-spacing: normal; text-align: left; padding: 9px; font-size: 0.9rem;
+    color-scheme: dark;
+  }
+  .date-pick button { margin-top: 0; width: auto; padding: 9px 16px; font-size: 0.85rem; }
+  .foot { margin-top: 18px; display: flex; gap: 8px; }
+  .foot button { background: #2c2725; font-weight: 600; font-size: 0.85rem; }
+  .note { color: var(--muted); font-size: 0.72rem; margin-top: 16px; text-align: center; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- PIN gate -->
+  <div class="card" id="gate">
+    <h1>Counter</h1>
+    <p class="sub">Enter PIN to view collection.</p>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off"
+           placeholder="PIN" maxlength="32" />
+    <button id="goBtn">View</button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <!-- Amounts only -->
+  <div class="card hidden" id="panel">
+    <h1>Collection</h1>
+    <p class="sub" id="dateLabel"></p>
+
+    <div class="today">
+      <div class="amount-label">Total collected</div>
+      <div class="amount-big" id="todayAmt">&#8377;0</div>
+    </div>
+
+    <div class="row"><span>Previous day</span><span id="yAmt">&#8377;0</span></div>
+    <div class="row"><span id="monthLbl">This month</span><span id="mAmt">&#8377;0</span></div>
+
+    <div class="date-pick">
+      <input id="datePick" type="date" />
+      <button id="dateBtn">Show</button>
+    </div>
+
+    <div class="foot">
+      <button id="refreshBtn">Refresh</button>
+      <button id="lockBtn">Lock</button>
+    </div>
+    <p class="note">
+      Counts a table's amount once you press Clear Table on the dashboard.
+    </p>
+  </div>
+</div>
+
+<script>
+  // The PIN is held in memory only for this tab, and is never written to
+  // localStorage/sessionStorage, so closing the tab locks the page again.
+  let pin = "";
+
+  const $ = (id) => document.getElementById(id);
+  const money = (n) =>
+    "\u20B9" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
+  async function load(date) {
+    const res = await fetch("/api/counter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify(date ? { pin, date } : { pin }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    return data;
+  }
+
+  function paint(d) {
+    $("todayAmt").textContent = money(d.today);
+    $("yAmt").textContent = money(d.yesterday);
+    $("mAmt").textContent = money(d.month);
+    $("dateLabel").textContent = d.date;
+    $("datePick").value = d.date;
+    const [y, m] = (d.monthLabel || "").split("-");
+    if (y && m) {
+      const name = new Date(Number(y), Number(m) - 1, 1)
+        .toLocaleString([], { month: "long" });
+      $("monthLbl").textContent = name + " total";
+    }
+  }
+
+  async function unlock() {
+    const entered = $("pin").value.trim();
+    if (!entered) return;
+    $("goBtn").disabled = true;
+    $("err").textContent = "";
+    try {
+      pin = entered;
+      paint(await load());
+      $("pin").value = "";
+      $("gate").classList.add("hidden");
+      $("panel").classList.remove("hidden");
+    } catch (e) {
+      pin = "";
+      $("err").textContent = e.message;
+    } finally {
+      $("goBtn").disabled = false;
+    }
+  }
+
+  async function reload(date) {
+    try {
+      paint(await load(date));
+    } catch (e) {
+      alert(e.message);
+      if (/PIN/i.test(e.message)) lock();
+    }
+  }
+
+  function lock() {
+    pin = "";
+    $("panel").classList.add("hidden");
+    $("gate").classList.remove("hidden");
+    $("pin").focus();
+  }
+
+  $("goBtn").addEventListener("click", unlock);
+  $("pin").addEventListener("keydown", (e) => { if (e.key === "Enter") unlock(); });
+  $("refreshBtn").addEventListener("click", () => reload($("datePick").value));
+  $("dateBtn").addEventListener("click", () => reload($("datePick").value));
+  $("lockBtn").addEventListener("click", lock);
+  $("pin").focus();
+</script>
+</body>
+</html>

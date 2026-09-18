@@ -19,10 +19,32 @@ const SETTINGS_PATH = path.join(__dirname, "data", "settings.json");
 // API this app uses. Dev/testing only — data is lost when the process exits.
 // ---------------------------------------------------------------------------
 function createMemoryDb() {
-  const store = { menu: [], orders: [], settings: [] };
+  const store = { menu: [], orders: [], settings: [], daily_totals: [] };
 
+  // Supports the small filter subset this app uses: plain equality plus
+  // { $regex } and { $in }, so the daily-totals month query works in dev too.
+  const matchValue = (docVal, cond) => {
+    if (cond && typeof cond === "object" && !Array.isArray(cond)) {
+      if (cond.$regex !== undefined) {
+        return new RegExp(cond.$regex, cond.$options || "").test(String(docVal));
+      }
+      if (cond.$in !== undefined) return cond.$in.includes(docVal);
+      return false;
+    }
+    return docVal === cond;
+  };
   const matches = (doc, filter = {}) =>
-    Object.entries(filter).every(([k, v]) => doc[k] === v);
+    Object.entries(filter).every(([k, v]) => matchValue(doc[k], v));
+
+  // Apply the update operators this app uses.
+  const applyUpdate = (doc, update = {}) => {
+    if (update.$set) Object.assign(doc, update.$set);
+    if (update.$inc) {
+      for (const [k, v] of Object.entries(update.$inc)) {
+        doc[k] = (typeof doc[k] === "number" ? doc[k] : 0) + v;
+      }
+    }
+  };
 
   const applyProjection = (doc, projection) => {
     if (!projection) return { ...doc };
@@ -55,15 +77,28 @@ function createMemoryDb() {
         list.forEach((doc) => docs.push({ ...doc }));
         return { insertedCount: list.length };
       },
-      updateOne: async (filter, update) => {
+      updateOne: async (filter, update, opts = {}) => {
         const d = docs.find((x) => matches(x, filter));
-        if (!d) return { matchedCount: 0, modifiedCount: 0 };
-        Object.assign(d, update.$set || {});
+        if (!d) {
+          if (opts.upsert) {
+            // Seed the new doc with the filter's equality fields, then apply
+            // the operators - same shape MongoDB produces.
+            const seeded = {};
+            for (const [k, v] of Object.entries(filter)) {
+              if (!(v && typeof v === "object" && !Array.isArray(v))) seeded[k] = v;
+            }
+            applyUpdate(seeded, update);
+            docs.push(seeded);
+            return { matchedCount: 0, modifiedCount: 0, upsertedCount: 1 };
+          }
+          return { matchedCount: 0, modifiedCount: 0 };
+        }
+        applyUpdate(d, update);
         return { matchedCount: 1, modifiedCount: 1 };
       },
       updateMany: async (filter, update) => {
         const hits = docs.filter((d) => matches(d, filter));
-        hits.forEach((d) => Object.assign(d, update.$set || {}));
+        hits.forEach((d) => applyUpdate(d, update));
         return { matchedCount: hits.length, modifiedCount: hits.length };
       },
       deleteOne: async (filter) => {
