@@ -162,6 +162,39 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
   .receipt-grand-total { font-size: 15px !important; font-weight: 900 !important; }
   .receipt-divider { border-top: 2px solid #000; }
   .sound-banner { display: none !important; }
+  /* ORDER SLIP / BILL banner and the per-order note. */
+  .receipt-doctype { font-size: 14px; font-weight: 900; color: #000; }
+  .receipt-note { font-size: 11px; font-weight: 700; color: #000; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   .modal-actions { display: none !important; }
+}
+
+/* ---------- Per-order print button + order block footer ----------
+   Each order on a table card can be printed on its own, any number of times.
+   Printing never removes the order - only Clear Table does.               */
+.order-block-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;
+}
+.order-subtotal { font-weight: 700; font-size: 0.9rem; }
+.order-print-btn {
+  background: #fff; color: #d9480f; border: 1.5px solid #d9480f;
+  border-radius: 8px; padding: 6px 12px; font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+}
+.order-print-btn:hover { background: #d9480f; color: #fff; }
+.order-note { font-size: 0.75rem; color: #666; margin-top: 4px; }
+
+/* Clear Table sits next to Generate Bill and is the ONLY thing that empties
+   a table, so it is styled as the deliberate/destructive action.           */
+.clear-btn { background: #f1f3f5; color: #c92a2a; font-weight: 600; }
+.clear-btn:hover { background: #ffe3e3; }
+
+/* Document type banner (ORDER SLIP / BILL) and per-slip note on receipts. */
+.receipt-doctype {
+  text-align: center; font-weight: 900; font-size: 0.95rem;
+  letter-spacing: 1px; color: #000;
+}
+.receipt-note {
+  font-size: 0.78rem; font-weight: 700; color: #000; margin-top: 4px;
 }

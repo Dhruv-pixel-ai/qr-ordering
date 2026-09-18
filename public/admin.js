@@ -21,6 +21,17 @@
 const POLL_MS = 2500; // how often to check for new orders
 
 let orders = [];
+// Cafe details / GST, loaded once at init and refreshed by socket if available.
+let settings = {
+  gstPercent: 5,
+  businessName: "THE KD'S CAFE",
+  address: "",
+  phone: "",
+};
+// How many times each order slip has been printed, so staff can see at a glance
+// what has already gone to the printer. Kept in memory only - printing must not
+// change any server state.
+const printCounts = new Map();
 let totalTables = 12;
 let seenOrderIds = new Set(); // every order id we have already announced
 let firstLoadDone = false;
@@ -195,6 +206,13 @@ async function init() {
   } catch (e) {
     console.error("config failed, using default table count:", e);
   }
+  // Cafe details + GST are needed to build single-order slips on the client
+  // (the /bill endpoint only totals a whole table).
+  try {
+    settings = await fetch(`/api/settings?t=${Date.now()}`, { cache: "no-store" }).then((r) => r.json());
+  } catch (e) {
+    console.error("settings failed, using defaults:", e);
+  }
   await poll();
   setInterval(poll, POLL_MS);
   // Catch up the moment the laptop wakes or the tab is refocused.
@@ -212,12 +230,11 @@ if (socket) {
     absorbOrders(orders);
     render();
   });
-  socket.on("order_finalized", ({ table }) => {
-    orders = orders.map((o) => (o.table === table ? { ...o, billed: true } : o));
-    render();
+  socket.on("settings_updated", (s) => {
+    if (s) settings = s;
   });
   socket.on("table_cleared", ({ table }) => {
-    orders = orders.filter((o) => o.table !== table || !o.billed);
+    orders = orders.filter((o) => o.table !== table);
     render();
   });
 }
@@ -253,6 +270,7 @@ function renderTableCard(table) {
           ? `<div class="table-total">Total: ₹${total}</div>
              <div class="table-footer">
                <button class="bill-btn" data-action="bill" data-table="${table}">Generate Bill</button>
+               <button class="clear-btn" data-action="clear" data-table="${table}">Clear Table</button>
              </div>`
           : ""
       }
@@ -260,21 +278,45 @@ function renderTableCard(table) {
   `;
 }
 
+function escapeHtml(str) {
+  return String(str == null ? "" : str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function orderSubtotal(order) {
+  return order.items.reduce((s, it) => s + it.price * it.qty, 0);
+}
+
 function renderOrderBlock(order) {
   const time = new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const sourceLabel =
     order.source === "waiter"
-      ? `🧑‍💼 Waiter${order.waiterName ? " (" + order.waiterName + ")" : ""}`
-      : "📱 Self-order (QR)";
+      ? `Waiter${order.waiterName ? " (" + escapeHtml(order.waiterName) + ")" : ""}`
+      : "Self-order (QR)";
+  const printed = printCounts.get(order.id) || 0;
   return `
     <div class="order-block">
       <div class="order-block-header">
-        <span>#${order.id.slice(-5)} · ${time}</span>
+        <span>#${order.id.slice(-5)} &middot; ${time}</span>
         <span class="source-badge">${sourceLabel}</span>
       </div>
-      <div class="customer-name">👤 ${order.customerName || "Guest"}</div>
-      ${order.items.map((it) => `<div class="order-item-row"><span>${it.name} x${it.qty}</span><span>₹${it.price * it.qty}</span></div>`).join("")}
-      ${order.note ? `<div style="font-size:0.75rem;color:#888;margin-top:4px;">Note: ${order.note}</div>` : ""}
+      <div class="customer-name">${escapeHtml(order.customerName || "Guest")}</div>
+      ${order.items
+        .map(
+          (it) =>
+            `<div class="order-item-row"><span>${escapeHtml(it.name)} x${it.qty}</span><span>&#8377;${it.price * it.qty}</span></div>`
+        )
+        .join("")}
+      ${order.note ? `<div class="order-note">Note: ${escapeHtml(order.note)}</div>` : ""}
+      <div class="order-block-footer">
+        <span class="order-subtotal">&#8377;${orderSubtotal(order)}</span>
+        <button class="order-print-btn" data-action="print-order" data-order-id="${order.id}">
+          Print this order${printed ? ` (${printed}x)` : ""}
+        </button>
+      </div>
     </div>
   `;
 }
@@ -283,89 +325,205 @@ function attachHandlers() {
   document.querySelectorAll('[data-action="bill"]').forEach((btn) => {
     btn.addEventListener("click", () => generateBill(btn.dataset.table));
   });
+  document.querySelectorAll('[data-action="clear"]').forEach((btn) => {
+    btn.addEventListener("click", () => clearTable(btn.dataset.table));
+  });
+  // Per-order slip. Prints ONE order and changes nothing else - the order stays
+  // on the table exactly as it was, and can be reprinted any number of times.
+  document.querySelectorAll('[data-action="print-order"]').forEach((btn) => {
+    btn.addEventListener("click", () => printSingleOrder(btn.dataset.orderId));
+  });
 }
 
-async function generateBill(table) {
-  const res = await fetch(`/api/tables/${table}/bill`, { method: "POST", cache: "no-store" });
-  const bill = await res.json();
-  if (bill.error) return alert(bill.error);
-  showBillModal(bill);
-  // Intentionally NOT mutating `orders` or re-rendering here — the order stays
-  // visible on the dashboard until Print or Clear Table is clicked.
-}
-
-function showBillModal(bill) {
-  const modal = document.getElementById("billModal");
-  const content = document.getElementById("billContent");
-  const dateStr = new Date(bill.generatedAt).toLocaleString([], {
+// ---------------------------------------------------------------------------
+// Receipts
+//
+// Nothing in this section writes to the server. Printing is purely a render +
+// window.print(); orders are only ever removed by Clear Table.
+// ---------------------------------------------------------------------------
+function receiptHtml(r) {
+  const dateStr = new Date(r.generatedAt).toLocaleString([], {
     day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
-  content.innerHTML = `
+  return `
     <div class="receipt">
       <div class="receipt-header">
-        <div class="receipt-brand">${bill.businessName}</div>
-        <div class="receipt-address">${bill.address}</div>
-        <div class="receipt-phone">Ph: ${bill.phone}</div>
+        <div class="receipt-brand">${escapeHtml(r.businessName || "")}</div>
+        ${r.address ? `<div class="receipt-address">${escapeHtml(r.address)}</div>` : ""}
+        ${r.phone ? `<div class="receipt-phone">Ph: ${escapeHtml(r.phone)}</div>` : ""}
       </div>
       <div class="receipt-divider"></div>
+      <div class="receipt-doctype">${escapeHtml(r.docType)}</div>
+      <div class="receipt-divider"></div>
       <div class="receipt-meta">
-        <span>Bill No: ${bill.billNo}</span>
-        <span>Table: ${bill.table}</span>
+        <span>${escapeHtml(r.refLabel)}: ${escapeHtml(r.refNo)}</span>
+        <span>Table: ${r.table}</span>
       </div>
-      <div class="receipt-meta">
-        <span>${dateStr}</span>
-      </div>
-      ${bill.customerNames && bill.customerNames.length ? `<div class="receipt-meta"><span>Guest: ${bill.customerNames.join(", ")}</span></div>` : ""}
+      <div class="receipt-meta"><span>${dateStr}</span></div>
+      ${r.guests ? `<div class="receipt-meta"><span>Guest: ${escapeHtml(r.guests)}</span></div>` : ""}
+      ${r.reprint ? `<div class="receipt-meta"><span>** REPRINT **</span></div>` : ""}
       <div class="receipt-divider"></div>
       <div class="receipt-items">
         <div class="receipt-item-row receipt-item-head">
           <span class="ri-name">Item</span><span class="ri-qty">Qty</span><span class="ri-amt">Amt</span>
         </div>
-        ${bill.items
+        ${r.items
           .map(
             (it) => `
           <div class="receipt-item-row">
-            <span class="ri-name">${it.name}</span>
+            <span class="ri-name">${escapeHtml(it.name)}</span>
             <span class="ri-qty">${it.qty}</span>
-            <span class="ri-amt">₹${it.price * it.qty}</span>
+            <span class="ri-amt">&#8377;${it.price * it.qty}</span>
           </div>`
           )
           .join("")}
       </div>
+      ${r.note ? `<div class="receipt-note">Note: ${escapeHtml(r.note)}</div>` : ""}
       <div class="receipt-divider"></div>
       <div class="receipt-totals">
-        <div class="receipt-row"><span>Subtotal</span><span>₹${bill.subtotal}</span></div>
-        <div class="receipt-row"><span>GST (${bill.gstPercent}%)</span><span>₹${bill.tax}</span></div>
-        <div class="receipt-row receipt-grand-total"><span>TOTAL</span><span>₹${bill.total}</span></div>
+        <div class="receipt-row"><span>Subtotal</span><span>&#8377;${r.subtotal}</span></div>
+        <div class="receipt-row"><span>GST (${r.gstPercent}%)</span><span>&#8377;${r.tax}</span></div>
+        <div class="receipt-row receipt-grand-total"><span>TOTAL</span><span>&#8377;${r.total}</span></div>
       </div>
       <div class="receipt-divider"></div>
       <div class="receipt-footer">Thank you! Visit again</div>
     </div>
-    <div class="modal-actions">
-      <button onclick="printBill(${bill.table})">🖨️ Print</button>
-      <button onclick="clearTable(${bill.table})">Clear Table</button>
-      <button onclick="closeModal()">Close</button>
-    </div>
   `;
-  modal.classList.remove("hidden");
 }
 
-async function printBill(table) {
-  // Prevent the dashboard's own page title from showing up in the browser's
-  // default print header/footer.
+function openReceipt(html, actionsHtml) {
+  document.getElementById("billContent").innerHTML = html + actionsHtml;
+  document.getElementById("billModal").classList.remove("hidden");
+}
+
+// Send whatever is currently in the modal to the printer. Deliberately does NOT
+// finalize, clear, close, or re-render: the customer's order must survive any
+// number of prints.
+function sendToPrinter(docTitle) {
   const originalTitle = document.title;
-  document.title = "Bill";
+  document.title = docTitle || "Receipt";
   window.print();
   document.title = originalTitle;
+}
 
-  await fetch(`/api/tables/${table}/finalize`, { method: "POST", cache: "no-store" });
-  orders = orders.map((o) => (o.table === Number(table) ? { ...o, billed: true } : o));
-  closeModal();
+// ---- single order slip -----------------------------------------------------
+function buildOrderReceipt(order) {
+  const subtotal = orderSubtotal(order);
+  const gstPercent = Number(settings.gstPercent) || 0;
+  const tax = Math.round(subtotal * (gstPercent / 100) * 100) / 100;
+  const total = Math.round((subtotal + tax) * 100) / 100;
+  return {
+    docType: "ORDER SLIP",
+    refLabel: "Order",
+    refNo: "#" + order.id.slice(-5),
+    table: order.table,
+    items: order.items,
+    note: order.note,
+    guests: order.customerName || "",
+    subtotal,
+    gstPercent,
+    tax,
+    total,
+    businessName: settings.businessName,
+    address: settings.address,
+    phone: settings.phone,
+    generatedAt: new Date().toISOString(),
+    reprint: (printCounts.get(order.id) || 0) > 0,
+  };
+}
+
+function printSingleOrder(orderId) {
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) return alert("That order is no longer on the dashboard.");
+
+  const receipt = buildOrderReceipt(order);
+  openReceipt(
+    receiptHtml(receipt),
+    `<div class="modal-actions">
+       <button onclick="reprintSingleOrder('${order.id}')">Print again</button>
+       <button onclick="closeModal()">Close</button>
+     </div>`
+  );
+  sendToPrinter(`Order ${receipt.refNo}`);
+  printCounts.set(order.id, (printCounts.get(order.id) || 0) + 1);
+  render(); // refresh only the "(2x)" badge; order data is untouched
+}
+
+// Reprint from inside the open modal, without closing it.
+function reprintSingleOrder(orderId) {
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) return;
+  const receipt = buildOrderReceipt(order);
+  document.getElementById("billContent").innerHTML =
+    receiptHtml(receipt) +
+    `<div class="modal-actions">
+       <button onclick="reprintSingleOrder('${order.id}')">Print again</button>
+       <button onclick="closeModal()">Close</button>
+     </div>`;
+  sendToPrinter(`Order ${receipt.refNo}`);
+  printCounts.set(order.id, (printCounts.get(order.id) || 0) + 1);
   render();
 }
 
+// ---- whole-table bill ------------------------------------------------------
+async function generateBill(table) {
+  const res = await fetch(`/api/tables/${table}/bill`, { method: "POST", cache: "no-store" });
+  const bill = await res.json();
+  if (bill.error) return alert(bill.error);
+  showBillModal(bill);
+}
+
+function showBillModal(bill) {
+  openReceipt(
+    receiptHtml({
+      docType: "BILL",
+      refLabel: "Bill No",
+      refNo: bill.billNo,
+      table: bill.table,
+      items: bill.items,
+      guests: (bill.customerNames || []).join(", "),
+      subtotal: bill.subtotal,
+      gstPercent: bill.gstPercent,
+      tax: bill.tax,
+      total: bill.total,
+      businessName: bill.businessName,
+      address: bill.address,
+      phone: bill.phone,
+      generatedAt: bill.generatedAt,
+    }),
+    `<div class="modal-actions">
+       <button onclick="printBill(${bill.table})">Print bill</button>
+       <button onclick="closeModal()">Close</button>
+     </div>`
+  );
+}
+
+// Prints the full bill and leaves EVERYTHING in place. The table is only
+// emptied by Clear Table, so the bill can be reprinted and the customer can
+// keep ordering afterwards.
+function printBill(table) {
+  sendToPrinter(`Bill - Table ${table}`);
+}
+
+// ---- the only destructive action ------------------------------------------
 async function clearTable(table) {
-  await fetch(`/api/tables/${table}/clear`, { method: "POST", cache: "no-store" });
+  const tableOrders = orders.filter((o) => o.table === Number(table));
+  const total = tableOrders.reduce((s, o) => s + orderSubtotal(o), 0);
+  const ok = confirm(
+    `Clear Table ${table}?\n\n` +
+      `${tableOrders.length} order(s), \u20B9${total} will be removed from the dashboard.\n` +
+      `Do this only after the customer has paid and left.`
+  );
+  if (!ok) return;
+
+  try {
+    const res = await fetch(`/api/tables/${table}/clear`, { method: "POST", cache: "no-store" });
+    if (!res.ok) throw new Error(`clear ${res.status}`);
+  } catch (e) {
+    console.error("clear failed:", e);
+    return alert("Could not clear the table. Please check the connection and try again.");
+  }
+  tableOrders.forEach((o) => printCounts.delete(o.id));
   orders = orders.filter((o) => o.table !== Number(table));
   closeModal();
   render();
