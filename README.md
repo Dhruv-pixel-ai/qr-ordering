@@ -59,6 +59,8 @@ You'll see:
    - `DB_NAME` — e.g. `kds_cafe`
    - `TOTAL_TABLES` — e.g. `50`
    - `BASE_URL` — your public URL, e.g. `https://kdscafe.onrender.com` — **important**: this makes the printed table QR codes point to your public site instead of a LAN IP.
+   - `COUNTER_PIN` — PIN for the confidential daily-collection page at `/counter.html`. **No default**: if you don't set this, that page refuses to show any amount. Use a long PIN.
+   - `CAFE_TZ` — optional, defaults to `Asia/Kolkata`. Decides which day a sale is counted in.
    - `PORT` is usually set automatically by the host.
 3. Set the start command to `npm start`.
 4. In Atlas **Network Access**, make sure your host's IPs are allowed (simplest: `0.0.0.0/0`).
@@ -108,3 +110,22 @@ qr-ordering/
 - The staff computer and customer phones must be on the **same WiFi network**.
 - Allow inbound connections on port 3000 in your firewall (Windows will prompt once — click Allow).
 - QR codes automatically use the machine's local IP unless `BASE_URL` is set.
+
+
+## Daily collection counter (confidential)
+
+Open `/counter.html` and enter `COUNTER_PIN` to see **only amounts**: total
+collected today, the previous day, the month so far, and any past date. No
+order details, item names, or order counts are shown or stored.
+
+How the number is built: when you press **Clear Table** on the dashboard, that
+table's total (subtotal + GST) is added to the day's running total. Printing an
+order slip or a bill records nothing, so reprinting can never double-count.
+Only one figure per day is kept in the database.
+
+This page is intentionally **not linked from the staff dashboard**, so counter
+staff won't stumble onto it. Share the URL and PIN only with the owner, and
+change `COUNTER_PIN` in the host's environment variables if it leaks.
+
+Note: the counter starts from the day you deploy this — takings from before
+that were never recorded and cannot be recovered.
