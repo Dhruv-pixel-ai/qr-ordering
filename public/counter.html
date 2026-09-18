@@ -3,173 +3,111 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="robots" content="noindex, nofollow" />
-<title>Counter</title>
+<title>Daily Counter — THE KD'S CAFE</title>
 <style>
   :root { --primary: #d9480f; --bg: #12100f; --card: #1e1b1a; --text: #f5f1ee; --muted: #9a918c; }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    margin: 0; min-height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--bg); color: var(--text);
-    display: flex; align-items: center; justify-content: center; padding: 20px;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 28px 16px;
   }
-  .wrap { width: 100%; max-width: 420px; }
+  h1 { font-size: 1.1rem; font-weight: 700; color: var(--muted); letter-spacing: 1px; margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 440px; }
   .card {
-    background: var(--card); border-radius: 16px; padding: 26px 22px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    background: var(--card); border-radius: 16px; padding: 20px 18px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
   }
-  h1 { margin: 0 0 4px; font-size: 1.15rem; }
-  .sub { margin: 0 0 20px; color: var(--muted); font-size: 0.82rem; }
-  input {
-    width: 100%; padding: 13px; border-radius: 10px; border: 1.5px solid #3a3533;
-    background: #171413; color: var(--text); font-size: 1rem; text-align: center;
-    letter-spacing: 3px;
+  .card.full { grid-column: 1 / -1; text-align: center; }
+  .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+  .amount { font-size: 2rem; font-weight: 800; letter-spacing: -0.5px; }
+  .amount.big { font-size: 3rem; }
+  .divider { width: 100%; max-width: 440px; border: none; border-top: 1px solid #2c2725; margin: 20px 0; }
+  .date-row { display: flex; gap: 10px; width: 100%; max-width: 440px; }
+  .date-row input {
+    flex: 1; padding: 11px 14px; border-radius: 10px; border: 1.5px solid #2c2725;
+    background: var(--card); color: var(--text); font-size: 0.95rem; color-scheme: dark;
   }
-  input:focus { outline: none; border-color: var(--primary); }
-  button {
-    width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 10px;
-    background: var(--primary); color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
+  .date-row input:focus { outline: none; border-color: var(--primary); }
+  .date-row button {
+    padding: 11px 20px; border-radius: 10px; border: none;
+    background: var(--primary); color: #fff; font-size: 0.9rem; font-weight: 700; cursor: pointer;
   }
-  button:disabled { opacity: 0.6; cursor: default; }
-  .err { color: #ff8787; font-size: 0.85rem; margin-top: 12px; text-align: center; min-height: 1.1em; }
-  .hidden { display: none; }
-
-  .amount-big { font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; }
-  .amount-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
-  .today { text-align: center; padding: 10px 0 18px; }
-  .row {
-    display: flex; justify-content: space-between; align-items: baseline;
-    padding: 12px 0; border-top: 1px solid #2c2725;
+  .refresh-btn {
+    margin-top: 20px; padding: 10px 28px; border-radius: 10px; border: none;
+    background: #2c2725; color: var(--text); font-size: 0.85rem; font-weight: 600; cursor: pointer;
   }
-  .row span:last-child { font-size: 1.15rem; font-weight: 700; }
-  .date-pick { display: flex; gap: 8px; margin-top: 18px; }
-  .date-pick input {
-    letter-spacing: normal; text-align: left; padding: 9px; font-size: 0.9rem;
-    color-scheme: dark;
-  }
-  .date-pick button { margin-top: 0; width: auto; padding: 9px 16px; font-size: 0.85rem; }
-  .foot { margin-top: 18px; display: flex; gap: 8px; }
-  .foot button { background: #2c2725; font-weight: 600; font-size: 0.85rem; }
-  .note { color: var(--muted); font-size: 0.72rem; margin-top: 16px; text-align: center; line-height: 1.5; }
+  .note { margin-top: 18px; font-size: 0.75rem; color: var(--muted); text-align: center; line-height: 1.6; max-width: 360px; }
+  .err { color: #ff8787; font-size: 0.85rem; margin-top: 12px; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <!-- PIN gate -->
-  <div class="card" id="gate">
-    <h1>Counter</h1>
-    <p class="sub">Enter PIN to view collection.</p>
-    <input id="pin" type="password" inputmode="numeric" autocomplete="off"
-           placeholder="PIN" maxlength="32" />
-    <button id="goBtn">View</button>
-    <div class="err" id="err"></div>
+<h1>THE KD'S CAFE — DAILY COUNTER</h1>
+
+<div class="grid">
+  <div class="card full">
+    <div class="label">Today's Collection</div>
+    <div class="amount big" id="todayAmt">₹—</div>
+    <div id="dateLabel" style="font-size:0.8rem;color:var(--muted);margin-top:6px;"></div>
   </div>
-
-  <!-- Amounts only -->
-  <div class="card hidden" id="panel">
-    <h1>Collection</h1>
-    <p class="sub" id="dateLabel"></p>
-
-    <div class="today">
-      <div class="amount-label">Total collected</div>
-      <div class="amount-big" id="todayAmt">&#8377;0</div>
-    </div>
-
-    <div class="row"><span>Previous day</span><span id="yAmt">&#8377;0</span></div>
-    <div class="row"><span id="monthLbl">This month</span><span id="mAmt">&#8377;0</span></div>
-
-    <div class="date-pick">
-      <input id="datePick" type="date" />
-      <button id="dateBtn">Show</button>
-    </div>
-
-    <div class="foot">
-      <button id="refreshBtn">Refresh</button>
-      <button id="lockBtn">Lock</button>
-    </div>
-    <p class="note">
-      Counts a table's amount once you press Clear Table on the dashboard.
-    </p>
+  <div class="card">
+    <div class="label">Yesterday</div>
+    <div class="amount" id="yAmt">₹—</div>
+  </div>
+  <div class="card">
+    <div class="label" id="monthLbl">This Month</div>
+    <div class="amount" id="mAmt">₹—</div>
   </div>
 </div>
 
-<script>
-  // The PIN is held in memory only for this tab, and is never written to
-  // localStorage/sessionStorage, so closing the tab locks the page again.
-  let pin = "";
+<hr class="divider" />
 
-  const $ = (id) => document.getElementById(id);
-  const money = (n) =>
-    "\u20B9" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+<div class="date-row">
+  <input id="datePick" type="date" />
+  <button onclick="load(document.getElementById('datePick').value)">Show</button>
+</div>
+
+<button class="refresh-btn" onclick="load()">↻ Refresh</button>
+<div class="err" id="err"></div>
+
+<p class="note">
+  Amount is added when you press <strong>Clear Table</strong> on the dashboard.<br/>
+  Printing a bill does not change this counter.
+</p>
+
+<script>
+  const money = n => "₹" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
   async function load(date) {
-    const res = await fetch("/api/counter", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-      body: JSON.stringify(date ? { pin, date } : { pin }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
-    return data;
-  }
-
-  function paint(d) {
-    $("todayAmt").textContent = money(d.today);
-    $("yAmt").textContent = money(d.yesterday);
-    $("mAmt").textContent = money(d.month);
-    $("dateLabel").textContent = d.date;
-    $("datePick").value = d.date;
-    const [y, m] = (d.monthLabel || "").split("-");
-    if (y && m) {
-      const name = new Date(Number(y), Number(m) - 1, 1)
-        .toLocaleString([], { month: "long" });
-      $("monthLbl").textContent = name + " total";
-    }
-  }
-
-  async function unlock() {
-    const entered = $("pin").value.trim();
-    if (!entered) return;
-    $("goBtn").disabled = true;
-    $("err").textContent = "";
+    document.getElementById("err").textContent = "";
     try {
-      pin = entered;
-      paint(await load());
-      $("pin").value = "";
-      $("gate").classList.add("hidden");
-      $("panel").classList.remove("hidden");
+      const res = await fetch("/api/counter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify(date ? { date } : {})
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Error " + res.status);
+
+      document.getElementById("todayAmt").textContent = money(d.today);
+      document.getElementById("yAmt").textContent     = money(d.yesterday);
+      document.getElementById("mAmt").textContent     = money(d.month);
+      document.getElementById("dateLabel").textContent = d.date;
+      document.getElementById("datePick").value        = d.date;
+
+      if (d.monthLabel) {
+        const [y, m] = d.monthLabel.split("-");
+        const name = new Date(+y, +m - 1, 1).toLocaleString([], { month: "long" });
+        document.getElementById("monthLbl").textContent = name + " Total";
+      }
     } catch (e) {
-      pin = "";
-      $("err").textContent = e.message;
-    } finally {
-      $("goBtn").disabled = false;
+      document.getElementById("err").textContent = e.message;
     }
   }
 
-  async function reload(date) {
-    try {
-      paint(await load(date));
-    } catch (e) {
-      alert(e.message);
-      if (/PIN/i.test(e.message)) lock();
-    }
-  }
-
-  function lock() {
-    pin = "";
-    $("panel").classList.add("hidden");
-    $("gate").classList.remove("hidden");
-    $("pin").focus();
-  }
-
-  $("goBtn").addEventListener("click", unlock);
-  $("pin").addEventListener("keydown", (e) => { if (e.key === "Enter") unlock(); });
-  $("refreshBtn").addEventListener("click", () => reload($("datePick").value));
-  $("dateBtn").addEventListener("click", () => reload($("datePick").value));
-  $("lockBtn").addEventListener("click", lock);
-  $("pin").focus();
+  load();
 </script>
 </body>
 </html>

@@ -344,13 +344,6 @@ async function totalFor(key) {
 }
 
 app.post("/api/counter", ah(async (req, res) => {
-  const ip = req.headers["x-forwarded-for"] || req.ip || "unknown";
-  if (throttled(String(ip).split(",")[0].trim())) {
-    return res.status(429).json({ error: "Too many attempts. Please wait a few minutes." });
-  }
-  const check = checkPin(req.body && req.body.pin);
-  if (!check.ok) return res.status(check.code).json({ error: check.error });
-
   // Optional explicit date (YYYY-MM-DD), else today in the cafe's timezone.
   const date = /^\d{4}-\d{2}-\d{2}$/.test((req.body && req.body.date) || "")
     ? req.body.date
