@@ -214,32 +214,64 @@ document.getElementById("closeCart").addEventListener("click", () => {
   document.getElementById("cartDrawer").classList.add("hidden");
 });
 
+let orderInFlight = false; // prevents double-tap
+
 document.getElementById("placeOrderBtn").addEventListener("click", async () => {
   const rows = Object.values(cart);
   if (!rows.length) return showToast("Add items to cart first");
   if (!customerName) {
-    // Safety net: shouldn't normally happen since name is captured on scan.
     document.getElementById("cartDrawer").classList.add("hidden");
     return showWelcomeIfNeeded();
   }
+  // Req 4: block a second tap while the first request is in flight.
+  if (orderInFlight) return;
+  orderInFlight = true;
+
+  const btn = document.getElementById("placeOrderBtn");
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Confirming your order…";
+  btn.style.opacity = "0.8";
+
   const items = rows.map((c) => ({ id: c.item.id, name: c.item.name, price: c.item.price, qty: c.qty }));
   const note = document.getElementById("orderNote").value;
 
-  const res = await fetch("/api/orders", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ table, items, note, customerName, source: "customer" }),
-  });
-  const data = await res.json();
-  if (data.success) {
-    showToast(`✅ Order placed, ${customerName}! The kitchen has been notified.`);
-    cart = {};
-    document.getElementById("orderNote").value = "";
-    renderMenu();
-    updateCartUI();
-    document.getElementById("cartDrawer").classList.add("hidden");
-  } else {
-    showToast(data.error || "Something went wrong, please try again.");
+  try {
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ table, items, note, customerName, source: "customer" }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      btn.textContent = "✅ Order Placed!";
+      btn.style.background = "#2f9e44";
+      cart = {};
+      document.getElementById("orderNote").value = "";
+      renderMenu();
+      updateCartUI();
+      // Show success state briefly, then close cart and reset button.
+      setTimeout(() => {
+        document.getElementById("cartDrawer").classList.add("hidden");
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.style.opacity = "";
+        btn.style.background = "";
+      }, 1200);
+      showToast(`✅ Order placed! Kitchen has been notified.`);
+    } else {
+      showToast(data.error || "Something went wrong, please try again.");
+      btn.disabled = false;
+      btn.textContent = originalText;
+      btn.style.opacity = "";
+    }
+  } catch (e) {
+    showToast("Network error — please try again.");
+    btn.disabled = false;
+    btn.textContent = originalText;
+    btn.style.opacity = "";
+  } finally {
+    orderInFlight = false;
   }
 });
 

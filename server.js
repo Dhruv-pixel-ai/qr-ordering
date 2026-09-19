@@ -277,6 +277,14 @@ app.post("/api/tables/:table/finalize", ah(async (req, res) => {
   res.json({ success: true });
 }));
 
+// ---------- API: delete a single order ----------
+app.delete("/api/orders/:id", ah(async (req, res) => {
+  const result = await db.collection("orders").deleteOne({ id: req.params.id });
+  if (!result.deletedCount) return res.status(404).json({ error: "Order not found" });
+  io.emit("order_deleted", { id: req.params.id });
+  res.json({ success: true });
+}));
+
 // ---------- API: clear a table (reset for next customer) ----------
 // Clearing a table is the moment the money is considered collected, so this is
 // where the day's counter is incremented. Only a single running total per day

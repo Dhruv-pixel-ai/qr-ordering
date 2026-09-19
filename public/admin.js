@@ -297,8 +297,10 @@ function renderOrderBlock(order) {
       ? `Waiter${order.waiterName ? " (" + escapeHtml(order.waiterName) + ")" : ""}`
       : "Self-order (QR)";
   const printed = printCounts.get(order.id) || 0;
+  // Req 1: highlight green until the first print, so kitchen knows what's new.
+  const isNew = printed === 0;
   return `
-    <div class="order-block">
+    <div class="order-block${isNew ? " order-block--new" : ""}">
       <div class="order-block-header">
         <span>#${order.id.slice(-5)} &middot; ${time}</span>
         <span class="source-badge">${sourceLabel}</span>
@@ -313,9 +315,14 @@ function renderOrderBlock(order) {
       ${order.note ? `<div class="order-note">Note: ${escapeHtml(order.note)}</div>` : ""}
       <div class="order-block-footer">
         <span class="order-subtotal">&#8377;${orderSubtotal(order)}</span>
-        <button class="order-print-btn" data-action="print-order" data-order-id="${order.id}">
-          Print this order${printed ? ` (${printed}x)` : ""}
-        </button>
+        <div class="order-block-actions">
+          <button class="order-print-btn" data-action="print-order" data-order-id="${order.id}">
+            🖨️ Print${printed ? ` (${printed}x)` : ""}
+          </button>
+          <button class="order-delete-btn" data-action="delete-order" data-order-id="${order.id}" title="Delete this order">
+            🗑️
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -328,10 +335,12 @@ function attachHandlers() {
   document.querySelectorAll('[data-action="clear"]').forEach((btn) => {
     btn.addEventListener("click", () => clearTable(btn.dataset.table));
   });
-  // Per-order slip. Prints ONE order and changes nothing else - the order stays
-  // on the table exactly as it was, and can be reprinted any number of times.
   document.querySelectorAll('[data-action="print-order"]').forEach((btn) => {
     btn.addEventListener("click", () => printSingleOrder(btn.dataset.orderId));
+  });
+  // Req 2: delete a single order without clearing the whole table.
+  document.querySelectorAll('[data-action="delete-order"]').forEach((btn) => {
+    btn.addEventListener("click", () => deleteOrder(btn.dataset.orderId));
   });
 }
 
@@ -357,7 +366,7 @@ function receiptHtml(r) {
       <div class="receipt-divider"></div>
       <div class="receipt-meta">
         <span>${escapeHtml(r.refLabel)}: ${escapeHtml(r.refNo)}</span>
-        <span>Table: ${r.table}</span>
+        <span class="receipt-table-num">TABLE ${r.table}</span>
       </div>
       <div class="receipt-meta"><span>${dateStr}</span></div>
       ${r.guests ? `<div class="receipt-meta"><span>Guest: ${escapeHtml(r.guests)}</span></div>` : ""}
@@ -378,7 +387,7 @@ function receiptHtml(r) {
           )
           .join("")}
       </div>
-      ${r.note ? `<div class="receipt-note">Note: ${escapeHtml(r.note)}</div>` : ""}
+      ${r.note ? `<div class="receipt-special">⚠️ SPECIAL: ${escapeHtml(r.note)}</div>` : ""}
       <div class="receipt-divider"></div>
       <div class="receipt-totals">
         <div class="receipt-row"><span>Subtotal</span><span>&#8377;${r.subtotal}</span></div>
@@ -404,6 +413,9 @@ function sendToPrinter(docTitle) {
   document.title = docTitle || "Receipt";
   window.print();
   document.title = originalTitle;
+  // Req 3: close the popup as soon as the print dialog is dismissed,
+  // so the kitchen dashboard is visible again immediately.
+  closeModal();
 }
 
 // ---- single order slip -----------------------------------------------------
@@ -503,6 +515,27 @@ function showBillModal(bill) {
 // keep ordering afterwards.
 function printBill(table) {
   sendToPrinter(`Bill - Table ${table}`);
+}
+
+// ---- delete a single order -------------------------------------------------
+async function deleteOrder(orderId) {
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) return;
+  const label = order.items.map((it) => `${it.name} x${it.qty}`).join(", ");
+  if (!confirm(`Delete this order?
+
+${label}
+
+This cannot be undone.`)) return;
+  try {
+    const res = await fetch(`/api/orders/${orderId}`, { method: "DELETE", cache: "no-store" });
+    if (!res.ok) throw new Error(`delete ${res.status}`);
+  } catch (e) {
+    return alert("Could not delete the order. Check connection and try again.");
+  }
+  printCounts.delete(orderId);
+  orders = orders.filter((o) => o.id !== orderId);
+  render();
 }
 
 // ---- the only destructive action ------------------------------------------
