@@ -50,6 +50,21 @@
     </div>
   </div>
 
+  <!-- Order success full-screen overlay (Req 1) -->
+  <div id="orderSuccessOverlay" class="order-success-overlay hidden">
+    <div class="order-success-card">
+      <div class="success-icon">🎉</div>
+      <h2 class="success-title">Thank You!</h2>
+      <p class="success-line">Your order has been placed successfully.</p>
+      <div class="success-steps">
+        <p>👨‍🍳 We're preparing your order now.</p>
+        <p>⏳ Please wait 5–10 minutes</p>
+        <p>Your food will be ready soon! ❤️</p>
+      </div>
+      <button class="success-back-btn" id="backToMenuBtn">Browse Menu</button>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>

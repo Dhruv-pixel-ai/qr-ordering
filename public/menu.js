@@ -6,8 +6,18 @@ const table = params.get("table") || "1";
 // script, so guard it and null-check every listener below.
 const socket = typeof io !== "undefined" ? io() : null;
 let menu = [];
+let categoryOrder = []; // set by server; defines display order for tabs + sections
 let cart = {}; // id -> {item, qty}
 let activeCategory = null;
+
+// Returns categories in the server-saved order, with any unknowns at the end.
+function orderedCategories() {
+  const all = [...new Set(menu.map((m) => m.category))];
+  return [
+    ...categoryOrder.filter((c) => all.includes(c)),
+    ...all.filter((c) => !categoryOrder.includes(c)),
+  ];
+}
 
 // ---------- Ask the customer's name ONCE, right when the QR is scanned ----------
 // Stored per browser tab session, so the same person isn't asked again for each
@@ -55,8 +65,10 @@ updateHeaderBadge();
 showWelcomeIfNeeded();
 
 async function loadMenu() {
-  const res = await fetch("/api/menu");
-  menu = await res.json();
+  [menu, categoryOrder] = await Promise.all([
+    fetch("/api/menu").then((r) => r.json()),
+    fetch("/api/category-order").then((r) => r.json()),
+  ]);
   renderTabs();
   renderMenu();
 }
@@ -71,6 +83,12 @@ socket && socket.on("menu_updated", (updatedMenu) => {
   updateCartUI();
 });
 
+socket && socket.on("category_order_updated", (order) => {
+  categoryOrder = order;
+  renderTabs();
+  renderMenu();
+});
+
 function pruneCartOfMissingOrOutOfStockItems() {
   Object.keys(cart).forEach((id) => {
     const stillThere = menu.find((m) => m.id === id && m.inStock);
@@ -79,7 +97,7 @@ function pruneCartOfMissingOrOutOfStockItems() {
 }
 
 function renderTabs() {
-  const categories = [...new Set(menu.map((m) => m.category))];
+  const categories = orderedCategories();
   activeCategory = categories[0];
   const tabsEl = document.getElementById("categoryTabs");
   tabsEl.innerHTML = categories
@@ -96,7 +114,7 @@ function renderTabs() {
 }
 
 function renderMenu() {
-  const categories = [...new Set(menu.map((m) => m.category))];
+  const categories = orderedCategories();
   const listEl = document.getElementById("menuList");
   listEl.innerHTML = categories
     .map((cat) => {
@@ -216,6 +234,15 @@ document.getElementById("closeCart").addEventListener("click", () => {
 
 let orderInFlight = false; // prevents double-tap
 
+function showOrderSuccess() {
+  document.getElementById("cartDrawer").classList.add("hidden");
+  document.getElementById("orderSuccessOverlay").classList.remove("hidden");
+}
+function hideOrderSuccess() {
+  document.getElementById("orderSuccessOverlay").classList.add("hidden");
+}
+document.getElementById("backToMenuBtn").addEventListener("click", hideOrderSuccess);
+
 document.getElementById("placeOrderBtn").addEventListener("click", async () => {
   const rows = Object.values(cart);
   if (!rows.length) return showToast("Add items to cart first");
@@ -223,15 +250,14 @@ document.getElementById("placeOrderBtn").addEventListener("click", async () => {
     document.getElementById("cartDrawer").classList.add("hidden");
     return showWelcomeIfNeeded();
   }
-  // Req 4: block a second tap while the first request is in flight.
   if (orderInFlight) return;
   orderInFlight = true;
 
   const btn = document.getElementById("placeOrderBtn");
   const originalText = btn.textContent;
   btn.disabled = true;
-  btn.textContent = "Confirming your order…";
-  btn.style.opacity = "0.8";
+  btn.textContent = "⏳ Confirming your order…";
+  btn.style.opacity = "0.75";
 
   const items = rows.map((c) => ({ id: c.item.id, name: c.item.name, price: c.item.price, qty: c.qty }));
   const note = document.getElementById("orderNote").value;
@@ -244,33 +270,22 @@ document.getElementById("placeOrderBtn").addEventListener("click", async () => {
     });
     const data = await res.json();
     if (data.success) {
-      btn.textContent = "✅ Order Placed!";
-      btn.style.background = "#2f9e44";
+      // Clear cart immediately so the menu is ready when they go back.
       cart = {};
       document.getElementById("orderNote").value = "";
       renderMenu();
       updateCartUI();
-      // Show success state briefly, then close cart and reset button.
-      setTimeout(() => {
-        document.getElementById("cartDrawer").classList.add("hidden");
-        btn.disabled = false;
-        btn.textContent = originalText;
-        btn.style.opacity = "";
-        btn.style.background = "";
-      }, 1200);
-      showToast(`✅ Order placed! Kitchen has been notified.`);
+      // Show the full-screen thank-you screen.
+      showOrderSuccess();
     } else {
       showToast(data.error || "Something went wrong, please try again.");
-      btn.disabled = false;
-      btn.textContent = originalText;
-      btn.style.opacity = "";
     }
   } catch (e) {
     showToast("Network error — please try again.");
+  } finally {
     btn.disabled = false;
     btn.textContent = originalText;
     btn.style.opacity = "";
-  } finally {
     orderInFlight = false;
   }
 });

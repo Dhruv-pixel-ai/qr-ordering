@@ -97,6 +97,50 @@ const ah = (fn) => (req, res) =>
     if (!res.headersSent) res.status(500).json({ error: "Internal server error" });
   });
 
+// ---------- API: category order ----------
+// Category display order is stored as an array in settings.categoryOrder.
+// The customer menu and the admin menu-manager both read from this to ensure
+// the same sequence is shown everywhere.
+
+app.get("/api/category-order", ah(async (req, res) => {
+  const settings = await loadSettings();
+  const allCats = [...new Set((await loadMenu()).map((m) => m.category))];
+  const saved = settings.categoryOrder || [];
+  // Saved order takes priority; any new category not yet in it goes to the end.
+  const ordered = [
+    ...saved.filter((c) => allCats.includes(c)),
+    ...allCats.filter((c) => !saved.includes(c)),
+  ];
+  res.json(ordered);
+}));
+
+app.put("/api/category-order", ah(async (req, res) => {
+  const { order } = req.body;
+  if (!Array.isArray(order)) return res.status(400).json({ error: "order must be an array" });
+  const settings = await loadSettings();
+  settings.categoryOrder = order;
+  await saveSettings(settings);
+  io.emit("category_order_updated", order);
+  res.json({ success: true });
+}));
+
+// ---------- API: rename a whole category ----------
+app.put("/api/categories/rename", ah(async (req, res) => {
+  const { from, to } = req.body;
+  if (!from || !to || !to.trim()) return res.status(400).json({ error: "from and to are required" });
+  const newName = to.trim();
+  if (from === newName) return res.json({ success: true }); // no-op
+  await db.collection("menu").updateMany({ category: from }, { $set: { category: newName } });
+  // Keep the saved order in sync.
+  const settings = await loadSettings();
+  if (Array.isArray(settings.categoryOrder)) {
+    settings.categoryOrder = settings.categoryOrder.map((c) => (c === from ? newName : c));
+    await saveSettings(settings);
+  }
+  io.emit("menu_updated", await loadMenu());
+  res.json({ success: true });
+}));
+
 // ---------- API: menu ----------
 app.get("/api/menu", ah(async (req, res) => {
   res.json(await loadMenu());
