@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light; /* tells Edge/Chrome forced-dark-mode to leave this page alone */
   --primary: #d9480f;
   --bg: #f4f4f6;
   --card: #ffffff;
