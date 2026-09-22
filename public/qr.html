@@ -10,6 +10,8 @@
   .card { background: white; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
   .card img { width: 100%; max-width: 220px; }
   .card h2 { margin: 8px 0 0; }
+  .parcel-card { border: 3px solid #f08c00; }
+  .parcel-card h2 { color: #e67700; font-size: 1.1rem; }
   .top-actions { text-align: center; margin-bottom: 20px; }
   button { padding: 8px 16px; border-radius: 8px; border: none; background: #d9480f; color: white; cursor: pointer; }
   @media print { .top-actions { display: none; } }
@@ -22,12 +24,13 @@
   <script>
     async function load() {
       const cfg = await fetch("/api/config").then(r => r.json());
+      const parcel = cfg.parcelTable || 16;
       const grid = document.getElementById("grid");
       grid.innerHTML = Array.from({ length: cfg.totalTables }, (_, i) => i + 1)
         .map(t => `
-          <div class="card">
-            <img src="/api/qrcode/${t}" alt="QR Table ${t}" />
-            <h2>Table ${t}</h2>
+          <div class="card ${t === parcel ? 'parcel-card' : ''}">
+            <img src="/api/qrcode/${t}" alt="${t === parcel ? 'Parcel Order' : 'QR Table ' + t}" />
+            <h2>${t === parcel ? '🛍️ Parcel Order' : 'Table ' + t}</h2>
           </div>
         `).join("");
     }

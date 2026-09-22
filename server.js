@@ -61,6 +61,7 @@ const DEFAULT_SETTINGS = {
   businessName: "THE KD'S CAFE",
   address: "Opposite Vijay Pan Parlour, Near Hero Showroom, Halvad Road, Dhrangadhra",
   phone: "9016231621 / 9913524260",
+  parcelTable: 16, // This table number is treated as a Parcel / Takeaway counter
 };
 
 const NO_ID = { projection: { _id: 0 } };
@@ -450,7 +451,13 @@ app.get("/api/qrcode/:table", ah(async (req, res) => {
 }));
 
 app.get("/api/config", ah(async (req, res) => {
-  res.json({ totalTables: TOTAL_TABLES, ip: getLocalIP(), port: PORT });
+  const settings = await loadSettings();
+  res.json({
+    totalTables: TOTAL_TABLES,
+    ip: getLocalIP(),
+    port: PORT,
+    parcelTable: settings.parcelTable || 16,
+  });
 }));
 
 io.on("connection", (socket) => {

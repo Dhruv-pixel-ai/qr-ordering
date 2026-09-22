@@ -236,3 +236,14 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
   .receipt-table-num { font-size: 16px !important; font-weight: 900 !important; }
   .receipt-special   { font-size: 13px !important; font-weight: 900 !important; border: 2px solid #000 !important; }
 }
+
+/* ── Parcel / Takeaway table ─────────────────────────────────────────────── */
+.parcel-card {
+  border: 2px solid #f08c00;
+  background: linear-gradient(135deg, #fff9f0 0%, #fff3e0 100%);
+}
+.parcel-card .table-card-header h2 { color: #e67700; }
+.parcel-badge {
+  font-size: 0.7rem; font-weight: 700; color: #fff;
+  background: #f08c00; border-radius: 10px; padding: 3px 10px;
+}

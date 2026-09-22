@@ -7,6 +7,7 @@ const table = params.get("table") || "1";
 const socket = typeof io !== "undefined" ? io() : null;
 let menu = [];
 let categoryOrder = []; // set by server; defines display order for tabs + sections
+let parcelTable = 16; // updated from /api/config
 let cart = {}; // id -> {item, qty}
 let activeCategory = null;
 
@@ -25,10 +26,14 @@ function orderedCategories() {
 const NAME_KEY = `kds_customer_name_t${table}`;
 let customerName = sessionStorage.getItem(NAME_KEY) || "";
 
+function tableLabel() {
+  return Number(table) === parcelTable ? "🛍️ Parcel Order" : `Table ${table}`;
+}
+
 function updateHeaderBadge() {
   document.getElementById("tableBadge").textContent = customerName
-    ? `Table ${table} · ${customerName}`
-    : `Table ${table}`;
+    ? `${tableLabel()} · ${customerName}`
+    : tableLabel();
 }
 
 async function showWelcomeIfNeeded() {
@@ -41,7 +46,8 @@ async function showWelcomeIfNeeded() {
     const s = await fetch("/api/settings").then((r) => r.json());
     if (s.businessName) document.getElementById("welcomeTitle").textContent = `Welcome to ${s.businessName}!`;
   } catch (e) {}
-  document.getElementById("welcomeSubtitle").textContent = `You're at Table ${table}`;
+  document.getElementById("welcomeSubtitle").textContent =
+    Number(table) === parcelTable ? "Parcel / Takeaway Order" : `You're at Table ${table}`;
   document.getElementById("welcomeOverlay").classList.remove("hidden");
   setTimeout(() => document.getElementById("welcomeName").focus(), 150);
 }
@@ -69,6 +75,8 @@ async function loadMenu() {
     fetch("/api/menu").then((r) => r.json()),
     fetch("/api/category-order").then((r) => r.json()),
   ]);
+  const cfg = await fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" }).then((r) => r.json()).catch(() => ({}));
+  parcelTable = cfg.parcelTable || 16;
   renderTabs();
   renderMenu();
 }
