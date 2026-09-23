@@ -7,7 +7,12 @@ const table = params.get("table") || "1";
 const socket = typeof io !== "undefined" ? io() : null;
 let menu = [];
 let categoryOrder = []; // set by server; defines display order for tabs + sections
-let parcelTable = 16; // updated from /api/config
+let parcelTables = [16,17,18,19,20]; // updated from /api/config
+
+function parcelLabel(t) {
+  const idx = parcelTables.indexOf(Number(t));
+  return idx >= 0 ? `Parcel ${idx + 1}` : null;
+}
 let cart = {}; // id -> {item, qty}
 let activeCategory = null;
 
@@ -27,7 +32,8 @@ const NAME_KEY = `kds_customer_name_t${table}`;
 let customerName = sessionStorage.getItem(NAME_KEY) || "";
 
 function tableLabel() {
-  return Number(table) === parcelTable ? "🛍️ Parcel Order" : `Table ${table}`;
+  const pl = parcelLabel(table);
+  return pl ? `🛍️ ${pl}` : `Table ${table}`;
 }
 
 function updateHeaderBadge() {
@@ -47,7 +53,7 @@ async function showWelcomeIfNeeded() {
     if (s.businessName) document.getElementById("welcomeTitle").textContent = `Welcome to ${s.businessName}!`;
   } catch (e) {}
   document.getElementById("welcomeSubtitle").textContent =
-    Number(table) === parcelTable ? "Parcel / Takeaway Order" : `You're at Table ${table}`;
+    parcelLabel(table) ? `${parcelLabel(table)} — Takeaway / Parcel` : `You're at Table ${table}`;
   document.getElementById("welcomeOverlay").classList.remove("hidden");
   setTimeout(() => document.getElementById("welcomeName").focus(), 150);
 }
@@ -76,7 +82,7 @@ async function loadMenu() {
     fetch("/api/category-order").then((r) => r.json()),
   ]);
   const cfg = await fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" }).then((r) => r.json()).catch(() => ({}));
-  parcelTable = cfg.parcelTable || 16;
+  parcelTables = cfg.parcelTables || [16,17,18,19,20];
   renderTabs();
   renderMenu();
 }

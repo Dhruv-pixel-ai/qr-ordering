@@ -21,7 +21,13 @@
 const POLL_MS = 2500; // how often to check for new orders
 
 let orders = [];
-let parcelTable = 16; // updated from /api/config on init
+let parcelTables = [16,17,18,19,20]; // updated from /api/config
+
+// Returns "Parcel 1" … "Parcel 5" for parcel tables, else null.
+function parcelLabel(table) {
+  const idx = parcelTables.indexOf(Number(table));
+  return idx >= 0 ? `Parcel ${idx + 1}` : null;
+}
 // Cafe details / GST, loaded once at init and refreshed by socket if available.
 let settings = {
   gstPercent: 5,
@@ -204,7 +210,7 @@ async function init() {
   try {
     const cfg = await fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" }).then((r) => r.json());
     totalTables = cfg.totalTables;
-    parcelTable = cfg.parcelTable || 16;
+    parcelTables = cfg.parcelTables || [16,17,18,19,20];
   } catch (e) {
     console.error("config failed, using default table count:", e);
   }
@@ -260,11 +266,12 @@ function renderTableCard(table) {
     0
   );
 
-  const isParcel = table === parcelTable;
+  const label = parcelLabel(table);
+  const isParcel = !!label;
   return `
     <div class="table-card ${isEmpty ? "empty" : ""} ${isParcel ? "parcel-card" : ""}" data-table="${table}">
       <div class="table-card-header">
-        <h2>${isParcel ? "🛍️ Parcel" : `Table ${table}`}</h2>
+        <h2>${isParcel ? `🛍️ ${label}` : `Table ${table}`}</h2>
         ${isEmpty ? `<span style='font-size:0.75rem;color:#999;'>No active order</span>` : ""}
         ${isParcel ? `<span class="parcel-badge">Takeaway</span>` : ""}
       </div>
@@ -273,7 +280,7 @@ function renderTableCard(table) {
         !isEmpty
           ? `<div class="table-total">Total: ₹${total}</div>
              <div class="table-footer">
-               <button class="bill-btn" data-action="bill" data-table="${table}">${isParcel ? "🛍️ Parcel Bill" : "Generate Bill"}</button>
+               <button class="bill-btn" data-action="bill" data-table="${table}">${isParcel ? `🛍️ ${label} Bill` : "Generate Bill"}</button>
                <button class="clear-btn" data-action="clear" data-table="${table}">Clear</button>
              </div>`
           : ""
@@ -370,7 +377,7 @@ function receiptHtml(r) {
       <div class="receipt-divider"></div>
       <div class="receipt-meta">
         <span>${escapeHtml(r.refLabel)}: ${escapeHtml(r.refNo)}</span>
-        <span class="receipt-table-num">${r.table === parcelTable ? "🛍️ PARCEL" : `TABLE ${r.table}`}</span>
+        <span class="receipt-table-num">${parcelLabel(r.table) ? `🛍️ ${parcelLabel(r.table).toUpperCase()}` : `TABLE ${r.table}`}</span>
       </div>
       <div class="receipt-meta"><span>${dateStr}</span></div>
       ${r.guests ? `<div class="receipt-meta"><span>Guest: ${escapeHtml(r.guests)}</span></div>` : ""}

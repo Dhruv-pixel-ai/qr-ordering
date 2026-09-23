@@ -6,13 +6,23 @@ let menu = [];
 let cart = {}; // id -> {item, qty}
 let activeCategory = null;
 let totalTables = 12;
+let parcelTables = [16,17,18,19,20]; // updated from /api/config
+
+function parcelLabel(t) {
+  const idx = parcelTables.indexOf(Number(t));
+  return idx >= 0 ? `🛍️ Parcel ${idx + 1}` : null;
+}
 
 async function init() {
   const cfg = await fetch("/api/config").then((r) => r.json());
   totalTables = cfg.totalTables;
+  parcelTables = cfg.parcelTables || [16,17,18,19,20];
   const select = document.getElementById("tableSelect");
   select.innerHTML = Array.from({ length: totalTables }, (_, i) => i + 1)
-    .map((t) => `<option value="${t}">Table ${t}</option>`)
+    .map((t) => {
+      const pl = parcelLabel(t);
+      return `<option value="${t}">${pl || `Table ${t}`}</option>`;
+    })
     .join("");
 
   const res = await fetch("/api/menu");

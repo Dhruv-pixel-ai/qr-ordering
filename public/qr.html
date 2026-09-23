@@ -24,15 +24,18 @@
   <script>
     async function load() {
       const cfg = await fetch("/api/config").then(r => r.json());
-      const parcel = cfg.parcelTable || 16;
+      const parcelTables = cfg.parcelTables || [16,17,18,19,20];
+      const parcelLabel = (t) => { const i = parcelTables.indexOf(t); return i >= 0 ? `Parcel ${i+1}` : null; };
       const grid = document.getElementById("grid");
       grid.innerHTML = Array.from({ length: cfg.totalTables }, (_, i) => i + 1)
-        .map(t => `
-          <div class="card ${t === parcel ? 'parcel-card' : ''}">
-            <img src="/api/qrcode/${t}" alt="${t === parcel ? 'Parcel Order' : 'QR Table ' + t}" />
-            <h2>${t === parcel ? '🛍️ Parcel Order' : 'Table ' + t}</h2>
-          </div>
-        `).join("");
+        .map(t => {
+          const pl = parcelLabel(t);
+          return `
+            <div class="card ${pl ? 'parcel-card' : ''}">
+              <img src="/api/qrcode/${t}" alt="${pl ? pl : 'QR Table ' + t}" />
+              <h2>${pl ? '🛍️ ' + pl : 'Table ' + t}</h2>
+            </div>`;
+        }).join("");
     }
     load();
   </script>
