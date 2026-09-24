@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="light" />
+<title>Printer Settings — THE KD'S CAFE</title>
+<script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js"></script>
+<link rel="stylesheet" href="admin.css" />
+<style>
+  .ps-wrap { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+  .ps-section { background: #fff; border-radius: 14px; padding: 22px 20px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .ps-section h2 { margin: 0 0 4px; font-size: 1.05rem; }
+  .ps-section .ps-sub { color: #888; font-size: 0.82rem; margin: 0 0 16px; }
+  .ps-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; }
+  .ps-row label { display: flex; flex-direction: column; gap: 5px; font-size: 0.82rem; font-weight: 600; flex: 1; min-width: 140px; }
+  .ps-row input, .ps-row select {
+    padding: 9px 12px; border-radius: 8px; border: 1.5px solid #ddd;
+    font-size: 0.95rem; background: #fafafa;
+  }
+  .ps-row input:focus, .ps-row select:focus { outline: none; border-color: #d9480f; background: #fff; }
+  .ps-row input[style*="width:80px"] { width: 80px; flex: none; }
+  .btn { padding: 9px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 600; }
+  .btn-primary { background: #d9480f; color: #fff; }
+  .btn-ghost { background: #f1f3f5; color: #333; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .status-bar {
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+    border-radius: 10px; font-size: 0.88rem; font-weight: 600; margin-bottom: 20px;
+  }
+  .status-bar.connected { background: #ebfbee; color: #2f9e44; border: 1px solid #b2f2bb; }
+  .status-bar.disconnected { background: #fff5f5; color: #c92a2a; border: 1px solid #ffc9c9; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot.green { background: #2f9e44; }
+  .dot.red   { background: #c92a2a; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #1b1b1f; color: #fff; padding: 10px 20px; border-radius: 8px;
+    font-size: 0.88rem; z-index: 99; display: none; }
+  .test-result { font-size: 0.78rem; margin-top: 6px; min-height: 1em; }
+  .test-result.ok  { color: #2f9e44; }
+  .test-result.err { color: #c92a2a; }
+  .steps { counter-reset: step; margin: 0; padding: 0; list-style: none; }
+  .steps li { counter-increment: step; display: flex; gap: 12px; margin-bottom: 12px; font-size: 0.87rem; line-height: 1.5; color: #444; }
+  .steps li::before { content: counter(step); background: #d9480f; color: #fff; border-radius: 50%; min-width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+  a { color: #d9480f; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <h1>🖨️ Printer Settings</h1>
+  <div class="header-right">
+    <a href="/admin.html" class="link-btn">← Dashboard</a>
+  </div>
+</header>
+
+<div class="ps-wrap">
+
+  <!-- QZ Tray status -->
+  <div id="qzStatus" class="status-bar disconnected">
+    <span class="dot red" id="qzDot"></span>
+    <span id="qzMsg">Connecting to QZ Tray…</span>
+    <button class="btn btn-ghost" id="qzRetryBtn" style="margin-left:auto;" onclick="connectQZ()">Retry</button>
+  </div>
+
+  <!-- Kitchen printer -->
+  <div class="ps-section">
+    <h2>🍳 Kitchen Printer (LAN / Network)</h2>
+    <p class="ps-sub">Connected to WiFi. Orders and KOT slips go here.</p>
+    <div class="ps-row">
+      <label>Printer IP Address
+        <input id="kitchenHost" type="text" placeholder="e.g. 192.168.1.50" />
+      </label>
+      <label style="max-width:100px;">Port
+        <input id="kitchenPort" type="number" value="9100" placeholder="9100" style="width:80px;" />
+      </label>
+    </div>
+    <div class="ps-row">
+      <button class="btn btn-ghost" id="testKitchenBtn" onclick="testKitchen()">Test Print</button>
+      <span class="test-result" id="kitchenTestResult"></span>
+    </div>
+  </div>
+
+  <!-- Counter printer -->
+  <div class="ps-section">
+    <h2>🧾 Counter Printer (USB)</h2>
+    <p class="ps-sub">Connected by USB to this PC. Bills and receipts go here.</p>
+    <div class="ps-row">
+      <label>Select Printer
+        <select id="counterName">
+          <option value="">— connect QZ Tray first —</option>
+        </select>
+      </label>
+      <button class="btn btn-ghost" id="refreshPrintersBtn" onclick="loadPrinters()" style="align-self:flex-end;">Refresh list</button>
+    </div>
+    <div class="ps-row">
+      <button class="btn btn-ghost" id="testCounterBtn" onclick="testCounter()">Test Print</button>
+      <span class="test-result" id="counterTestResult"></span>
+    </div>
+  </div>
+
+  <!-- Save -->
+  <div style="display:flex; gap:10px;">
+    <button class="btn btn-primary" id="saveBtn" onclick="saveConfig()">Save Printer Settings</button>
+  </div>
+
+  <!-- Setup guide -->
+  <div class="ps-section" style="margin-top:24px; background:#fffbf5; border:1px solid #ffe8cc;">
+    <h2>⚙️ First-time setup — QZ Tray</h2>
+    <p class="ps-sub">Do this once on the counter PC. Takes about 5 minutes.</p>
+    <ol class="steps">
+      <li><strong>Download and install QZ Tray</strong> (free) from <a href="https://qz.io/download/" target="_blank">qz.io/download</a>. It runs silently in the background.</li>
+      <li>After install, a QZ Tray icon appears in the Windows system tray (bottom-right). It starts automatically with Windows.</li>
+      <li><strong>Allow unsigned connections:</strong> right-click the QZ Tray icon → <em>Site Manager</em> → type <code>kds-cafe.com</code> → tick <em>Allow unsigned</em> → Save.</li>
+      <li>Come back to this page and click <strong>Retry</strong> above. The status bar should turn green.</li>
+      <li>Enter your kitchen printer's IP address, select the counter printer from the dropdown, click <strong>Test Print</strong> on each to confirm, then <strong>Save Printer Settings</strong>.</li>
+      <li>From now on: clicking <em>Print</em> on an order sends the KOT silently to the kitchen. Clicking <em>Generate Bill</em> sends the bill silently to the counter. No dialog, no clicking.</li>
+    </ol>
+    <p style="font-size:0.8rem;color:#888;margin-top:8px;">
+      💡 To find the kitchen printer's IP: print a test page from the printer itself — most thermal printers print their IP on startup or via a button press.
+    </p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let qzConnected = false;
+
+// ── QZ Tray security (unsigned mode) ─────────────────────────────────────────
+function setupQZSecurity() {
+  qz.security.setCertificatePromise((resolve) => resolve());
+  qz.security.setSignatureAlgorithm("SHA512");
+  qz.security.setSignaturePromise((toSign) => (resolve) => resolve());
+  qz.websocket.setClosedCallbacks(() => {
+    qzConnected = false;
+    setQZStatus(false, "QZ Tray disconnected. Is it running?");
+  });
+}
+
+async function connectQZ() {
+  if (typeof qz === "undefined") {
+    setQZStatus(false, "QZ Tray script not loaded. Check internet connection.");
+    return;
+  }
+  setQZStatus(null, "Connecting to QZ Tray…");
+  try {
+    setupQZSecurity();
+    if (qz.websocket.isActive()) await qz.websocket.disconnect();
+    await qz.websocket.connect();
+    qzConnected = true;
+    setQZStatus(true, "QZ Tray connected ✓");
+    await loadPrinters();
+    await loadSavedConfig();
+  } catch (e) {
+    qzConnected = false;
+    setQZStatus(false, "Cannot reach QZ Tray. Make sure it is running and kds-cafe.com is in Site Manager.");
+  }
+}
+
+function setQZStatus(ok, msg) {
+  const bar = document.getElementById("qzStatus");
+  const dot = document.getElementById("qzDot");
+  const txt = document.getElementById("qzMsg");
+  if (ok === true) {
+    bar.className = "status-bar connected"; dot.className = "dot green";
+  } else if (ok === false) {
+    bar.className = "status-bar disconnected"; dot.className = "dot red";
+  } else {
+    bar.className = "status-bar"; dot.className = "dot";
+    bar.style.background = "#f8f9fa"; bar.style.border = "1px solid #dee2e6"; bar.style.color = "#666";
+  }
+  txt.textContent = msg;
+}
+
+// ── Printers ──────────────────────────────────────────────────────────────────
+async function loadPrinters() {
+  if (!qzConnected) return;
+  try {
+    const printers = await qz.printers.find();
+    const sel = document.getElementById("counterName");
+    const saved = sel.dataset.saved || "";
+    sel.innerHTML = '<option value="">— select a printer —</option>' +
+      printers.map((p) => `<option value="${p}" ${p === saved ? "selected" : ""}>${p}</option>`).join("");
+    if (saved) sel.value = saved;
+  } catch (e) {
+    showToast("Could not load printers: " + e.message);
+  }
+}
+
+async function loadSavedConfig() {
+  try {
+    const cfg = await fetch("/api/printer-config", { cache: "no-store" }).then((r) => r.json());
+    document.getElementById("kitchenHost").value = cfg.kitchen.host || "";
+    document.getElementById("kitchenPort").value = cfg.kitchen.port || 9100;
+    document.getElementById("counterName").dataset.saved = cfg.counter.name || "";
+    if (cfg.counter.name) document.getElementById("counterName").value = cfg.counter.name;
+  } catch (e) { /* ignore */ }
+}
+
+// ── Test prints ───────────────────────────────────────────────────────────────
+const ESC = "\x1B", GS = "\x1D";
+function testESC(label) {
+  return ESC+"@" + ESC+"a\x01" + GS+"!\x11" + ESC+"E\x01" + label + ESC+"E\x00" + GS+"!\x00" + "\n" +
+    ESC+"a\x00" + "Test print from KD'S CAFE\n" + new Date().toLocaleString() + "\n\n\n\n" + GS+"V\x41\x03";
+}
+
+async function testKitchen() {
+  const btn = document.getElementById("testKitchenBtn");
+  const res = document.getElementById("kitchenTestResult");
+  const host = document.getElementById("kitchenHost").value.trim();
+  const port = Number(document.getElementById("kitchenPort").value) || 9100;
+  if (!host) { res.textContent = "Enter IP first"; res.className = "test-result err"; return; }
+  if (!qzConnected) { res.textContent = "QZ Tray not connected"; res.className = "test-result err"; return; }
+  btn.disabled = true; res.textContent = "Printing…"; res.className = "test-result";
+  try {
+    const cfg = qz.configs.create({ host, port });
+    await qz.print(cfg, [{ type: "raw", format: "plain", data: testESC("KITCHEN PRINTER") }]);
+    res.textContent = "✓ Test sent to kitchen printer"; res.className = "test-result ok";
+  } catch (e) {
+    res.textContent = "✗ " + e.message; res.className = "test-result err";
+  } finally { btn.disabled = false; }
+}
+
+async function testCounter() {
+  const btn = document.getElementById("testCounterBtn");
+  const res = document.getElementById("counterTestResult");
+  const name = document.getElementById("counterName").value;
+  if (!name) { res.textContent = "Select a printer first"; res.className = "test-result err"; return; }
+  if (!qzConnected) { res.textContent = "QZ Tray not connected"; res.className = "test-result err"; return; }
+  btn.disabled = true; res.textContent = "Printing…"; res.className = "test-result";
+  try {
+    const cfg = qz.configs.create(name);
+    await qz.print(cfg, [{ type: "raw", format: "plain", data: testESC("COUNTER PRINTER") }]);
+    res.textContent = "✓ Test sent to counter printer"; res.className = "test-result ok";
+  } catch (e) {
+    res.textContent = "✗ " + e.message; res.className = "test-result err";
+  } finally { btn.disabled = false; }
+}
+
+// ── Save ──────────────────────────────────────────────────────────────────────
+async function saveConfig() {
+  const btn = document.getElementById("saveBtn");
+  btn.disabled = true;
+  try {
+    const res = await fetch("/api/printer-config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kitchen: {
+          host: document.getElementById("kitchenHost").value.trim(),
+          port: Number(document.getElementById("kitchenPort").value) || 9100,
+        },
+        counter: { name: document.getElementById("counterName").value },
+      }),
+    });
+    const d = await res.json();
+    showToast(d.success ? "✓ Printer settings saved!" : (d.error || "Save failed"));
+  } catch (e) {
+    showToast("Save failed: " + e.message);
+  } finally { btn.disabled = false; }
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.style.display = "block";
+  setTimeout(() => { t.style.display = "none"; }, 3000);
+}
+
+// Auto-connect on load.
+connectQZ();
+</script>
+</body>
+</html>

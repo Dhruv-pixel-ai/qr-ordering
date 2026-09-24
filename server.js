@@ -61,7 +61,11 @@ const DEFAULT_SETTINGS = {
   businessName: "THE KD'S CAFE",
   address: "Opposite Vijay Pan Parlour, Near Hero Showroom, Halvad Road, Dhrangadhra",
   phone: "9016231621 / 9913524260",
-  parcelTables: [16, 17, 18, 19, 20], // Tables treated as Parcel/Takeaway counters
+  parcelTables: [16, 17, 18, 19, 20],
+  printerConfig: {
+    kitchen: { host: "", port: 9100 },   // LAN printer – IP + raw socket port
+    counter: { name: "" },               // USB printer – Windows printer name
+  },
 };
 
 const NO_ID = { projection: { _id: 0 } };
@@ -139,6 +143,21 @@ app.put("/api/categories/rename", ah(async (req, res) => {
     await saveSettings(settings);
   }
   io.emit("menu_updated", await loadMenu());
+  res.json({ success: true });
+}));
+
+// ---------- API: printer config ----------
+app.get("/api/printer-config", ah(async (req, res) => {
+  const s = await loadSettings();
+  res.json(s.printerConfig || DEFAULT_SETTINGS.printerConfig);
+}));
+
+app.put("/api/printer-config", ah(async (req, res) => {
+  const { kitchen, counter } = req.body || {};
+  if (!kitchen || !counter) return res.status(400).json({ error: "kitchen and counter required" });
+  const s = await loadSettings();
+  s.printerConfig = { kitchen, counter };
+  await saveSettings(s);
   res.json({ success: true });
 }));
 

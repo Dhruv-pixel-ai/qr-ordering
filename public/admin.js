@@ -223,6 +223,7 @@ async function init() {
   }
   await poll();
   setInterval(poll, POLL_MS);
+  initQZ(); // connect to QZ Tray in background; falls back gracefully if not running
   // Catch up the moment the laptop wakes or the tab is refocused.
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") poll();
@@ -417,15 +418,133 @@ function openReceipt(html, actionsHtml) {
 }
 
 // Send whatever is currently in the modal to the printer. Deliberately does NOT
-// finalize, clear, close, or re-render: the customer's order must survive any
-// number of prints.
-function sendToPrinter(docTitle) {
+// ─── QZ Tray integration ────────────────────────────────────────────────────
+// QZ Tray is a free background app that lets the browser print silently to a
+// specific physical printer. When it's running we skip the print dialog
+// entirely. If it's not running we fall back to window.print().
+
+let qzReady = false;
+let printerCfg = { kitchen: { host: "", port: 9100 }, counter: { name: "" } };
+
+const ESC = "\x1B", GS = "\x1D";
+const INIT         = ESC + "@";
+const CENTER       = ESC + "a\x01";
+const LEFT         = ESC + "a\x00";
+const BOLD_ON      = ESC + "E\x01";
+const BOLD_OFF     = ESC + "E\x00";
+const BIG          = GS  + "!\x11";   // 2× width + 2× height
+const NORMAL       = GS  + "!\x00";
+const CUT          = GS  + "V\x41\x05";
+const SEP          = "─".repeat(32) + "\n";
+
+function setDot(id, state) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = "printer-dot printer-dot--" + state; // ok | warn | off
+}
+
+async function initQZ() {
+  if (typeof qz === "undefined") {
+    setDot("kitchenDot", "off"); setDot("counterDot", "off"); return;
+  }
+  // Unsigned mode – user must enable "Allow unsigned" in QZ Tray site manager.
+  qz.security.setCertificatePromise((resolve) => resolve());
+  qz.security.setSignatureAlgorithm("SHA512");
+  qz.security.setSignaturePromise((toSign) => (resolve) => resolve());
+
+  qz.websocket.setClosedCallbacks(() => {
+    qzReady = false;
+    setDot("kitchenDot", "off"); setDot("counterDot", "off");
+  });
+
+  try {
+    await qz.websocket.connect();
+    qzReady = true;
+    printerCfg = await fetch("/api/printer-config", { cache: "no-store" }).then((r) => r.json());
+    updatePrinterDots();
+  } catch (e) {
+    qzReady = false;
+    setDot("kitchenDot", "off"); setDot("counterDot", "off");
+  }
+}
+
+function updatePrinterDots() {
+  setDot("kitchenDot", qzReady && printerCfg.kitchen.host ? "ok" : (qzReady ? "warn" : "off"));
+  setDot("counterDot", qzReady && printerCfg.counter.name ? "ok" : (qzReady ? "warn" : "off"));
+}
+
+// Build ESC/POS data for a Kitchen Order Ticket.
+function buildKOT(order) {
+  const time = new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const tblLabel = parcelLabel(order.table) || `Table ${order.table}`;
+  let d = INIT + CENTER + BIG + BOLD_ON + tblLabel + BOLD_OFF + NORMAL + "\n" + LEFT;
+  d += SEP;
+  d += BOLD_ON + `#${order.id.slice(-5)}  ${time}` + BOLD_OFF + "\n";
+  d += `Guest: ${order.customerName || "Guest"}\n`;
+  d += `Type: ${order.source === "waiter" ? "Waiter" + (order.waiterName ? ` (${order.waiterName})` : "") : "Self-order (QR)"}` + "\n";
+  d += SEP;
+  order.items.forEach((it) => {
+    const name = it.name.length > 28 ? it.name.slice(0, 27) + "…" : it.name;
+    const qty = `x${it.qty}`;
+    d += BOLD_ON + name.padEnd(32 - qty.length) + qty + BOLD_OFF + "\n";
+  });
+  d += SEP;
+  if (order.note) d += BOLD_ON + "⚠ SPECIAL: " + order.note.toUpperCase() + BOLD_OFF + "\n" + SEP;
+  d += "\n\n\n" + CUT;
+  return d;
+}
+
+// Build ESC/POS data for the counter billing receipt.
+function buildBillESC(bill) {
+  const tblLabel = parcelLabel(bill.table) ? parcelLabel(bill.table).toUpperCase() : `TABLE ${bill.table}`;
+  const date = new Date(bill.generatedAt).toLocaleString([], {
+    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  let d = INIT + CENTER + BIG + BOLD_ON + (bill.businessName || "") + BOLD_OFF + NORMAL + "\n";
+  if (bill.address) d += bill.address + "\n";
+  if (bill.phone)   d += "Ph: " + bill.phone + "\n";
+  d += LEFT + SEP;
+  d += CENTER + BOLD_ON + "BILL" + BOLD_OFF + "\n" + LEFT;
+  d += SEP;
+  d += `Bill No: ${bill.billNo}`.padEnd(20) + tblLabel + "\n";
+  d += date + "\n";
+  if (bill.customerNames && bill.customerNames.length) d += `Guest: ${bill.customerNames.join(", ")}\n`;
+  d += SEP;
+  const COL = [24, 4, 10]; // name, qty, amount
+  d += BOLD_ON + "Item".padEnd(COL[0]) + "Qty".padEnd(COL[1]) + "Amt".padStart(COL[2]) + BOLD_OFF + "\n";
+  d += SEP;
+  bill.items.forEach((it) => {
+    const nm = it.name.length > COL[0] - 1 ? it.name.slice(0, COL[0] - 2) + "…" : it.name;
+    d += nm.padEnd(COL[0]) + `x${it.qty}`.padEnd(COL[1]) + `₹${it.price * it.qty}`.padStart(COL[2]) + "\n";
+  });
+  d += SEP;
+  d += "Subtotal".padEnd(28) + `₹${bill.subtotal}`.padStart(10) + "\n";
+  d += `GST (${bill.gstPercent}%)`.padEnd(28) + `₹${bill.tax}`.padStart(10) + "\n";
+  d += SEP;
+  d += BOLD_ON + "TOTAL".padEnd(28) + `₹${bill.total}`.padStart(10) + BOLD_OFF + "\n";
+  d += SEP;
+  d += CENTER + "Thank you! Visit again 🙏\n\n\n\n" + LEFT + CUT;
+  return d;
+}
+
+// Silent print to the kitchen LAN printer via QZ Tray.
+async function qzPrintKitchen(escData) {
+  const cfg = qz.configs.create({ host: printerCfg.kitchen.host, port: printerCfg.kitchen.port || 9100 });
+  await qz.print(cfg, [{ type: "raw", format: "plain", data: escData }]);
+}
+
+// Silent print to the counter USB printer via QZ Tray.
+async function qzPrintCounter(escData) {
+  const cfg = qz.configs.create(printerCfg.counter.name);
+  await qz.print(cfg, [{ type: "raw", format: "plain", data: escData }]);
+}
+
+// Browser fallback (window.print) — used when QZ Tray is not running.
+function browserPrint(docTitle) {
   const originalTitle = document.title;
   document.title = docTitle || "Receipt";
   window.print();
   document.title = originalTitle;
-  // Req 3: close the popup as soon as the print dialog is dismissed,
-  // so the kitchen dashboard is visible again immediately.
   closeModal();
 }
 
@@ -455,10 +574,26 @@ function buildOrderReceipt(order) {
   };
 }
 
-function printSingleOrder(orderId) {
+async function printSingleOrder(orderId) {
   const order = orders.find((o) => o.id === orderId);
   if (!order) return alert("That order is no longer on the dashboard.");
 
+  printCounts.set(order.id, (printCounts.get(order.id) || 0) + 1);
+  render();
+
+  if (qzReady && printerCfg.kitchen.host) {
+    // ── QZ Tray path: silent KOT to kitchen printer ──
+    try {
+      await qzPrintKitchen(buildKOT(order));
+      closeModal();
+      return;
+    } catch (e) {
+      console.error("QZ kitchen print failed:", e);
+      alert("Kitchen printer error: " + e.message + "\n\nFalling back to browser print.");
+    }
+  }
+
+  // ── Browser fallback: show KOT receipt in modal then window.print() ──
   const receipt = buildOrderReceipt(order);
   openReceipt(
     receiptHtml(receipt),
@@ -467,15 +602,26 @@ function printSingleOrder(orderId) {
        <button onclick="closeModal()">Close</button>
      </div>`
   );
-  sendToPrinter(`Order ${receipt.refNo}`);
-  printCounts.set(order.id, (printCounts.get(order.id) || 0) + 1);
-  render(); // refresh only the "(2x)" badge; order data is untouched
+  browserPrint(`Order ${receipt.refNo}`);
 }
 
-// Reprint from inside the open modal, without closing it.
-function reprintSingleOrder(orderId) {
+async function reprintSingleOrder(orderId) {
   const order = orders.find((o) => o.id === orderId);
   if (!order) return;
+
+  printCounts.set(order.id, (printCounts.get(order.id) || 0) + 1);
+  render();
+
+  if (qzReady && printerCfg.kitchen.host) {
+    try {
+      await qzPrintKitchen(buildKOT(order));
+      closeModal();
+      return;
+    } catch (e) {
+      console.error("QZ kitchen reprint failed:", e);
+    }
+  }
+
   const receipt = buildOrderReceipt(order);
   document.getElementById("billContent").innerHTML =
     receiptHtml(receipt) +
@@ -483,9 +629,7 @@ function reprintSingleOrder(orderId) {
        <button onclick="reprintSingleOrder('${order.id}')">Print again</button>
        <button onclick="closeModal()">Close</button>
      </div>`;
-  sendToPrinter(`Order ${receipt.refNo}`);
-  printCounts.set(order.id, (printCounts.get(order.id) || 0) + 1);
-  render();
+  browserPrint(`Order ${receipt.refNo}`);
 }
 
 // ---- whole-table bill ------------------------------------------------------
@@ -497,6 +641,8 @@ async function generateBill(table) {
 }
 
 function showBillModal(bill) {
+  // Stash raw bill data so printBill() can build ESC/POS from it (QZ Tray path).
+  document.getElementById("billModal").dataset.bill = JSON.stringify(bill);
   openReceipt(
     receiptHtml({
       docType: "BILL",
@@ -524,8 +670,24 @@ function showBillModal(bill) {
 // Prints the full bill and leaves EVERYTHING in place. The table is only
 // emptied by Clear Table, so the bill can be reprinted and the customer can
 // keep ordering afterwards.
-function printBill(table) {
-  sendToPrinter(`Bill - Table ${table}`);
+async function printBill(table) {
+  if (qzReady && printerCfg.counter.name) {
+    // ── QZ Tray path: silent bill to counter printer ──
+    // We need the bill data — it's in the modal's data attribute.
+    const billData = document.getElementById("billModal").dataset.bill;
+    if (billData) {
+      try {
+        await qzPrintCounter(buildBillESC(JSON.parse(billData)));
+        closeModal();
+        return;
+      } catch (e) {
+        console.error("QZ counter print failed:", e);
+        alert("Counter printer error: " + e.message + "\n\nFalling back to browser print.");
+      }
+    }
+  }
+  // ── Browser fallback ──
+  browserPrint(`Bill - Table ${table}`);
 }
 
 // ---- delete a single order -------------------------------------------------

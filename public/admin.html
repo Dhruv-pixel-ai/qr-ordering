@@ -6,6 +6,8 @@
 <meta name="color-scheme" content="light" />
 <title>THE KD'S CAFE — Dashboard</title>
 <link rel="stylesheet" href="admin.css" />
+<!-- QZ Tray: enables silent printing to specific printers without a dialog -->
+<script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -15,6 +17,11 @@
       <a href="/menu-manager.html" class="link-btn">Manage Menu</a>
       <a href="/waiter.html" class="link-btn">Take Order (Waiter)</a>
       <a href="/qr.html" class="link-btn">Table QR Codes</a>
+      <a href="/printer-settings.html" class="link-btn" id="printerSettingsBtn">🖨️ Printers</a>
+      <span class="printer-status-wrap" title="Printer status">
+        <span class="printer-dot" id="kitchenDot" title="Kitchen printer"></span>
+        <span class="printer-dot" id="counterDot" title="Counter printer"></span>
+      </span>
     </div>
   </header>
 
