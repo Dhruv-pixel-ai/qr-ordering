@@ -111,12 +111,18 @@
     <ol class="steps">
       <li><strong>Download and install QZ Tray</strong> (free) from <a href="https://qz.io/download/" target="_blank">qz.io/download</a>. It runs silently in the background.</li>
       <li>After install, a QZ Tray icon appears in the Windows system tray (bottom-right). It starts automatically with Windows.</li>
-      <li><strong>Allow unsigned connections:</strong> right-click the QZ Tray icon → <em>Site Manager</em> → type <code>kds-cafe.com</code> → tick <em>Allow unsigned</em> → Save.</li>
+      <li><strong>Add the KD'S CAFE certificate to QZ Tray:</strong> right-click the QZ Tray icon → <em>Site Manager</em> → click <strong>+</strong> → browse to the <code>kds-cafe-qz.crt</code> file you downloaded (link below) → click OK → Save.</li>
       <li>Come back to this page and click <strong>Retry</strong> above. The status bar should turn green.</li>
       <li>Enter your kitchen printer's IP address, select the counter printer from the dropdown, click <strong>Test Print</strong> on each to confirm, then <strong>Save Printer Settings</strong>.</li>
       <li>From now on: clicking <em>Print</em> on an order sends the KOT silently to the kitchen. Clicking <em>Generate Bill</em> sends the bill silently to the counter. No dialog, no clicking.</li>
     </ol>
-    <p style="font-size:0.8rem;color:#888;margin-top:8px;">
+    <p style="margin-top:12px;">
+      <a class="btn btn-ghost" href="/api/qz-cert" download="kds-cafe-qz.crt" style="display:inline-block;text-decoration:none;">
+        ⬇️ Download Certificate (.crt)
+      </a>
+      <span style="font-size:0.78rem;color:#888;margin-left:10px;">Add this file to QZ Tray Site Manager</span>
+    </p>
+    <p style="font-size:0.8rem;color:#888;margin-top:12px;">
       💡 To find the kitchen printer's IP: print a test page from the printer itself — most thermal printers print their IP on startup or via a button press.
     </p>
   </div>
@@ -129,9 +135,21 @@ let qzConnected = false;
 
 // ── QZ Tray security (unsigned mode) ─────────────────────────────────────────
 function setupQZSecurity() {
-  qz.security.setCertificatePromise((resolve) => resolve());
+  qz.security.setCertificatePromise((resolve, reject) => {
+    fetch("/api/qz-cert", { cache: "no-store" })
+      .then((r) => r.text()).then(resolve).catch(reject);
+  });
   qz.security.setSignatureAlgorithm("SHA512");
-  qz.security.setSignaturePromise((toSign) => (resolve) => resolve());
+  qz.security.setSignaturePromise((toSign) => (resolve, reject) => {
+    fetch("/api/qz-sign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ toSign }),
+    })
+      .then((r) => r.json())
+      .then((d) => resolve(d.signature))
+      .catch(reject);
+  });
   qz.websocket.setClosedCallbacks(() => {
     qzConnected = false;
     setQZStatus(false, "QZ Tray disconnected. Is it running?");

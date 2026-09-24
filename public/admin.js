@@ -447,10 +447,23 @@ async function initQZ() {
   if (typeof qz === "undefined") {
     setDot("kitchenDot", "off"); setDot("counterDot", "off"); return;
   }
-  // Unsigned mode – user must enable "Allow unsigned" in QZ Tray site manager.
-  qz.security.setCertificatePromise((resolve) => resolve());
+  // Fetch public cert from our server, sign challenges server-side with the
+  // matching private key. This is how QZ Tray knows the request is genuine.
+  qz.security.setCertificatePromise((resolve, reject) => {
+    fetch("/api/qz-cert", { cache: "no-store" })
+      .then((r) => r.text()).then(resolve).catch(reject);
+  });
   qz.security.setSignatureAlgorithm("SHA512");
-  qz.security.setSignaturePromise((toSign) => (resolve) => resolve());
+  qz.security.setSignaturePromise((toSign) => (resolve, reject) => {
+    fetch("/api/qz-sign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ toSign }),
+    })
+      .then((r) => r.json())
+      .then((d) => resolve(d.signature))
+      .catch(reject);
+  });
 
   qz.websocket.setClosedCallbacks(() => {
     qzReady = false;

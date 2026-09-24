@@ -6,6 +6,58 @@ const path = require("path");
 const QRCode = require("qrcode");
 const os = require("os");
 const crypto = require("crypto");
+
+// QZ Tray certificate (self-signed, valid 10 years). The matching private key
+// is stored in the QZ_PRIVATE_KEY env var. Together they let QZ Tray verify
+// that print requests genuinely come from kds-cafe.com.
+const QZ_CERT = process.env.QZ_CERT || `-----BEGIN CERTIFICATE-----
+MIIDWTCCAkGgAwIBAgIUKvjccNR5urhLbZXQ0Ax6kk6wIVEwDQYJKoZIhvcNAQEL
+BQAwPDEVMBMGA1UEAwwMa2RzLWNhZmUuY29tMRYwFAYDVQQKDA1USEUgS0QnUyBD
+QUZFMQswCQYDVQQGEwJJTjAeFw0yNjA5MjQxMTMyMTVaFw0zNjA5MjExMTMyMTVa
+MDwxFTATBgNVBAMMDGtkcy1jYWZlLmNvbTEWMBQGA1UECgwNVEhFIEtEJ1MgQ0FG
+RTELMAkGA1UEBhMCSU4wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCl
+eTTuYn1YCv5Y71BMC5zQbKYFTmicqcNcxsymq7jfwq9YvyZcqJgLFm+U8N4RGf2a
+IVXZ98eXSKzc9BgnHO4StmnbSKY3J2Sd+g49y17rAQZ7aYWZWGnik4gD/p2vsThR
+eW3DaH0xTJDA7jwNdClaTE3OOhYlM98lQn13LffumJ8F3SrL4DdQ7lc3nZfy1HxD
+qobAckOH0GAlbZDT6daobuwIfLgU+HxFzAhXeDVYrw/rXIDmkySYlglyhcDIDbVg
+BoGQlrJpAgY3Rj/BmG5ZCoDjWsZV8RTLOtV6Vg2UQhN9Ip4o9ul6u7c1jBPyKKLr
+hnYntM4LEDjWxNifC/ldAgMBAAGjUzBRMB0GA1UdDgQWBBQHtajra/RVSE2e9jka
+bsntjFYASjAfBgNVHSMEGDAWgBQHtajra/RVSE2e9jkabsntjFYASjAPBgNVHRMB
+Af8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQA4r1rNsOxKZxyH496+I/pZQ/kt
++llcMpKNMeC5v7xQgTpXUf6dEdJRIOe6I8+VmcsLbOL3w6msFlwDvMB0q1c+rmxE
+qmH4Ek/VKmblShT7E4BYWOkgiehMFdi5C3ZJuJGOTJVujeNoUiNPFghPB5hSZIWU
+hiZnu6V2YX1+2ayWoTc3QSu5VNtVNDsT89Ie8EF5sf5ErfC/QAVs5Qo103CAEKQ2
+cMBQnApe+n+8DjVbINd66vKTkJ173ALkbgl0cV4o8aVl8luEIuA/PaCta4dXaKQ0
+yibmkE2skaAXUFpEyjkLwEmC/UoNAOVRxA2Ph0hNJYhYFOAdXon5QDdUAIc+
+-----END CERTIFICATE-----`;
+const QZ_PRIVATE_KEY = process.env.QZ_PRIVATE_KEY || `-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCleTTuYn1YCv5Y
+71BMC5zQbKYFTmicqcNcxsymq7jfwq9YvyZcqJgLFm+U8N4RGf2aIVXZ98eXSKzc
+9BgnHO4StmnbSKY3J2Sd+g49y17rAQZ7aYWZWGnik4gD/p2vsThReW3DaH0xTJDA
+7jwNdClaTE3OOhYlM98lQn13LffumJ8F3SrL4DdQ7lc3nZfy1HxDqobAckOH0GAl
+bZDT6daobuwIfLgU+HxFzAhXeDVYrw/rXIDmkySYlglyhcDIDbVgBoGQlrJpAgY3
+Rj/BmG5ZCoDjWsZV8RTLOtV6Vg2UQhN9Ip4o9ul6u7c1jBPyKKLrhnYntM4LEDjW
+xNifC/ldAgMBAAECggEADzCRK1DfMLXRo1hUhqaKPpe6pcIM2FS9GkclgidBUUkN
+z5e8bcUML/hfRczWlbtNDFkDCH82UyzYsW+2x+Bf+lfEX9zLZUS4d8f8hq+khu4R
+KkMFgI4dKi9gzP0SfI5IHTKIYOe2lk/w+cTkvldrdF6MxeGPJtscIM95tPcDS2OR
+awn0PJ7hbcv8qpuiGSj7NO6p42F7bTUhAqDJzGl5tQEsk5a7U9h0/9wAXbiDEybD
+PCLkIWn6392EvFyEkGDPIbvxRZLDgZG+zmpfjB8+ffSZiqSf5wB/40xoFYbQKZUo
+olNOe98i4khQ+7Ri+kpm2IYloCY1NcGY8VgYb09AAQKBgQDQv/HaIyPJJ6Asjset
+1021xK7+cbr3alVnlOi0uZmQCa4Yf5y8K/JiQLQ31cdCAPLqrNzut3OlN6bW4PId
+dXPATKn88eRHwiydCaOGu+HborOKDtp+yUK/uHd5eP47AJdrZqOVw614JKAestiy
+vEMNwqgWGvySV4/hxc2z8bQ8IQKBgQDK7ZsBZo+Tv+IlnOhwB/29DYqPtbi1s+y/
+uUsjthbS8KxVX+ISm+028U5F4VA8YNkme4OlEJCtQfBdCrcAuzlMHcilPHuP6gOx
+V3UxQa3zgyTxal3JxzeSMDKI2/Fz6/Npz9xGY1h5cjoYVuXRm3SDVUB/GdVIINQj
+4JSvQXD1vQKBgGn8+xQRgWrxxp65A+NdDOS8b0lbf119zM0hyyFvluuOLqnbqT3V
+ZmTCi35J+bimeK/0gtxlor8BSaGSZvvUFahOhIScYJaanUJCkZeoL13v9w6iygdT
+sqNbSrYPW62jeD4cx/QTfTEiD3ZmwiXF9pm2+tb2bsTy1mgAoZe6ohNhAoGBALNA
+zhKfqSZncnmtL/l+ZZoxMvudF0uSYwg8wm4KNAEjTeegag/sIs/MukqqK/kZx9fh
+dTlC97nELHHTvDHuMD/Xc1zan39RxO9LhR78mI8pgmGqhqxtyN3eq1UPjCrM+1i1
+nyuiKA4nY8AKSrosKvC0RuO/SxKKxTnn8Q8arJC1AoGAPJIWzy3iKlhFheYy+SlP
+Q0O3gLneaL871hJyaa86Ad2a9fVmtLv3KQdzCvd+43CYrp4DkahkP/iIA2n3S1Rc
+kLO9NdUGVJqEVNg9Osa0CVJCStV0Y4SmitZ74n2rIaVU88Ngno0bkbI7iMOClnfH
+GMmopiwLu2WCSdTYPd4BSPE=
+-----END PRIVATE KEY-----`;
 const { initDb } = require("./db");
 
 const app = express();
@@ -145,6 +197,32 @@ app.put("/api/categories/rename", ah(async (req, res) => {
   io.emit("menu_updated", await loadMenu());
   res.json({ success: true });
 }));
+
+// ---------- API: QZ Tray certificate and signing ----------
+// QZ Tray fetches the public certificate from here and verifies that the page
+// is allowed to use this cert before allowing any print job.
+app.get("/api/qz-cert", (req, res) => {
+  res.set("Content-Type", "application/x-pem-file");
+  res.set("Content-Disposition", 'attachment; filename="kds-cafe-qz.crt"');
+  res.set("Cache-Control", "public, max-age=86400");
+  res.send(QZ_CERT);
+});
+
+// The browser sends QZ Tray's challenge string here; the server signs it with
+// the private key and returns the Base64 signature.
+app.post("/api/qz-sign", (req, res) => {
+  const { toSign } = req.body || {};
+  if (!toSign) return res.status(400).json({ error: "toSign required" });
+  try {
+    const signature = crypto.createSign("SHA512")
+      .update(toSign)
+      .sign(QZ_PRIVATE_KEY, "base64");
+    res.json({ signature });
+  } catch (e) {
+    console.error("QZ sign error:", e.message);
+    res.status(500).json({ error: "Signing failed" });
+  }
+});
 
 // ---------- API: printer config ----------
 app.get("/api/printer-config", ah(async (req, res) => {
