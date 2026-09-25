@@ -435,7 +435,7 @@ const BOLD_OFF     = ESC + "E\x00";
 const BIG          = GS  + "!\x11";   // 2× width + 2× height
 const NORMAL       = GS  + "!\x00";
 const CUT          = GS  + "V\x41\x05";
-const SEP          = "─".repeat(32) + "\n";
+const SEP          = "-".repeat(40) + "\n";  // ASCII dash; "─" (U+2500) printed as garbage on CP437 printers
 
 function setDot(id, state) {
   const el = document.getElementById(id);
@@ -497,12 +497,12 @@ function buildKOT(order) {
   d += `Type: ${order.source === "waiter" ? "Waiter" + (order.waiterName ? ` (${order.waiterName})` : "") : "Self-order (QR)"}` + "\n";
   d += SEP;
   order.items.forEach((it) => {
-    const name = it.name.length > 28 ? it.name.slice(0, 27) + "…" : it.name;
+    const name = it.name.length > 28 ? it.name.slice(0, 27) + ".." : it.name;
     const qty = `x${it.qty}`;
     d += BOLD_ON + name.padEnd(32 - qty.length) + qty + BOLD_OFF + "\n";
   });
   d += SEP;
-  if (order.note) d += BOLD_ON + "⚠ SPECIAL: " + order.note.toUpperCase() + BOLD_OFF + "\n" + SEP;
+  if (order.note) d += BOLD_ON + "!! SPECIAL: " + order.note.toUpperCase() + BOLD_OFF + "\n" + SEP;
   d += "\n\n\n" + CUT;
   return d;
 }
@@ -527,16 +527,16 @@ function buildBillESC(bill) {
   d += BOLD_ON + "Item".padEnd(COL[0]) + "Qty".padEnd(COL[1]) + "Amt".padStart(COL[2]) + BOLD_OFF + "\n";
   d += SEP;
   bill.items.forEach((it) => {
-    const nm = it.name.length > COL[0] - 1 ? it.name.slice(0, COL[0] - 2) + "…" : it.name;
-    d += nm.padEnd(COL[0]) + `x${it.qty}`.padEnd(COL[1]) + `₹${it.price * it.qty}`.padStart(COL[2]) + "\n";
+    const nm = it.name.length > COL[0] - 1 ? it.name.slice(0, COL[0] - 2) + ".." : it.name;
+    d += nm.padEnd(COL[0]) + `x${it.qty}`.padEnd(COL[1]) + `Rs.${it.price * it.qty}`.padStart(COL[2]) + "\n";
   });
   d += SEP;
-  d += "Subtotal".padEnd(28) + `₹${bill.subtotal}`.padStart(10) + "\n";
-  d += `GST (${bill.gstPercent}%)`.padEnd(28) + `₹${bill.tax}`.padStart(10) + "\n";
+  d += "Subtotal".padEnd(28) + `Rs.${bill.subtotal}`.padStart(10) + "\n";
+  d += `GST (${bill.gstPercent}%)`.padEnd(28) + `Rs.${bill.tax}`.padStart(10) + "\n";
   d += SEP;
-  d += BOLD_ON + "TOTAL".padEnd(28) + `₹${bill.total}`.padStart(10) + BOLD_OFF + "\n";
+  d += BOLD_ON + "TOTAL".padEnd(28) + `Rs.${bill.total}`.padStart(10) + BOLD_OFF + "\n";
   d += SEP;
-  d += CENTER + "Thank you! Visit again 🙏\n\n\n\n" + LEFT + CUT;
+  d += CENTER + "Thank you! Visit again!\n\n\n\n" + LEFT + CUT;
   return d;
 }
 
