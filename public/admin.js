@@ -18,7 +18,10 @@
 // never be announced twice.
 // ---------------------------------------------------------------------------
 
-const POLL_MS = 2500; // how often to check for new orders
+// Poll interval: 15 s keeps Vercel Hobby usage well under 100 k invocations/month
+// even with the dashboard open all day. Orders still appear within ~15 s via
+// polling (or instantly via Socket.IO when available on non-serverless hosting).
+const POLL_MS = 15000;
 
 let orders = [];
 let parcelTables = [16,17,18,19,20]; // updated from /api/config
@@ -222,13 +225,22 @@ async function init() {
     console.error("settings failed, using defaults:", e);
   }
   await poll();
-  setInterval(poll, POLL_MS);
-  initQZ(); // connect to QZ Tray in background; falls back gracefully if not running
-  // Catch up the moment the laptop wakes or the tab is refocused.
+
+  // Smart polling: pause completely when the tab is hidden (browser minimised or
+  // staff switches to another tab). Hidden tabs were burning ~half of all Vercel
+  // function invocations without any benefit. Resume the instant the tab returns.
+  let pollTimer = setInterval(poll, POLL_MS);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") poll();
+    if (document.visibilityState === "hidden") {
+      clearInterval(pollTimer);
+    } else {
+      poll(); // immediate catch-up on return
+      pollTimer = setInterval(poll, POLL_MS);
+    }
   });
-  window.addEventListener("focus", poll);
+  window.addEventListener("focus", () => { if (document.visibilityState === "visible") poll(); });
+
+  initQZ(); // connect to QZ Tray in background; falls back gracefully if not running
   updateSoundBanner();
 }
 
