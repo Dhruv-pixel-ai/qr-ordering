@@ -21,7 +21,7 @@
 // Poll interval: 15 s keeps Vercel Hobby usage well under 100 k invocations/month
 // even with the dashboard open all day. Orders still appear within ~15 s via
 // polling (or instantly via Socket.IO when available on non-serverless hosting).
-const POLL_MS = 15000;
+const POLL_MS = 30000;
 
 let orders = [];
 let parcelTables = [16,17,18,19,20]; // updated from /api/config
