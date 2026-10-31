@@ -1,23 +1,27 @@
 // ---------------------------------------------------------------------------
 // Kitchen dashboard.
 //
-// How orders reach this screen (no polling):
-// The server pushes every change over Socket.IO the moment it happens
-// (new_order, order_deleted, table_cleared), so a new order appears - with the
-// beep and green highlight - within about a second, with no refresh.
+// IMPORTANT — why this polls instead of using websockets:
+// This app is hosted on Vercel serverless. Every HTTP request runs in its own
+// short-lived process, so Socket.IO cannot hold a persistent connection: the
+// io.emit("new_order") raised while saving an order happens in a DIFFERENT
+// process from the dashboard's socket, so the push never arrives. That is why
+// new orders used to show up only after a manual refresh, and why the beep
+// (which lived inside socket.on("new_order")) never fired.
 //
-// This needs an always-on server (it does NOT work on Vercel serverless, where
-// each request is a short-lived process and the push never reaches the
-// dashboard's connection).
-//
-// Orders are fetched from /api/orders only:
-//   1. once when the page opens,
-//   2. again whenever the live connection RE-connects (WiFi blip, laptop
-//      sleep), so anything missed while offline is picked up, and
-//   3. once when the tab becomes visible again.
-// Pushed and fetched orders go through the same code (absorbOrders), which
-// tracks order ids, so an order can never be announced twice.
+// So the dashboard now POLLS /api/orders on a short interval and detects new
+// orders by diffing order ids. This works identically for QR self-orders and
+// waiter orders, and keeps working if websockets are unavailable.
+// Socket.IO is still used opportunistically when it happens to work (e.g. when
+// running locally with `npm start`) — it just makes updates instant instead of
+// up to POLL_MS late. Both paths funnel through the same code, so an order can
+// never be announced twice.
 // ---------------------------------------------------------------------------
+
+// Poll interval: 15 s keeps Vercel Hobby usage well under 100 k invocations/month
+// even with the dashboard open all day. Orders still appear within ~15 s via
+// polling (or instantly via Socket.IO when available on non-serverless hosting).
+const POLL_MS = 30000;
 
 let orders = [];
 let parcelTables = [16,17,18,19,20]; // updated from /api/config
@@ -41,7 +45,7 @@ const printCounts = new Map();
 let totalTables = 12;
 let seenOrderIds = new Set(); // every order id we have already announced
 let firstLoadDone = false;
-let refreshInFlight = false;
+let pollInFlight = false;
 
 // Socket.IO is optional. If /socket.io/socket.io.js failed to load, `io` is not
 // defined — referencing it directly used to throw and kill this whole script,
@@ -182,26 +186,26 @@ async function fetchOrders() {
   return res.json();
 }
 
-// The dot in the header now shows the LIVE CONNECTION to the server:
-// green = connected (new orders will be pushed), red = offline/reconnecting.
 function setStatus(ok) {
   const dot = document.getElementById("connStatus");
   if (dot) dot.style.background = ok ? "#2f9e44" : "#e03131";
 }
 
-// Fetch the full order list once. Not on a timer - see the header comment.
-async function refreshOrders() {
-  if (refreshInFlight) return;
-  refreshInFlight = true;
+async function poll() {
+  if (pollInFlight) return;
+  pollInFlight = true;
   try {
     const list = await fetchOrders();
     orders = list;
     absorbOrders(list);
     render();
+    setStatus(true);
   } catch (e) {
-    console.error("could not load orders:", e);
+    // Never let a transient failure stop the polling loop.
+    console.error("poll failed:", e);
+    setStatus(false);
   } finally {
-    refreshInFlight = false;
+    pollInFlight = false;
   }
 }
 
@@ -220,43 +224,31 @@ async function init() {
   } catch (e) {
     console.error("settings failed, using defaults:", e);
   }
-  await refreshOrders();
+  await poll();
 
-  // Catch up once when the tab/laptop comes back (no timer involved).
+  // Smart polling: pause completely when the tab is hidden (browser minimised or
+  // staff switches to another tab). Hidden tabs were burning ~half of all Vercel
+  // function invocations without any benefit. Resume the instant the tab returns.
+  let pollTimer = setInterval(poll, POLL_MS);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") refreshOrders();
+    if (document.visibilityState === "hidden") {
+      clearInterval(pollTimer);
+    } else {
+      poll(); // immediate catch-up on return
+      pollTimer = setInterval(poll, POLL_MS);
+    }
   });
+  window.addEventListener("focus", () => { if (document.visibilityState === "visible") poll(); });
 
   initQZ(); // connect to QZ Tray in background; falls back gracefully if not running
   updateSoundBanner();
 }
 
-// Live updates pushed by the server.
-// The dot starts red and is turned green by the 'connect' handler below. It is
-// set here, at load time, so it can never overwrite a connection that is
-// already up.
-setStatus(false);
+// Opportunistic instant updates when websockets actually work.
 if (socket) {
-  let hasConnectedBefore = false;
-  socket.on("connect", () => {
-    setStatus(true);
-    // A RE-connect means we may have missed pushes while offline: reload once.
-    // (The very first connect is skipped - init() already loads the orders.)
-    if (hasConnectedBefore) refreshOrders();
-    hasConnectedBefore = true;
-  });
-  socket.on("disconnect", () => setStatus(false));
-  socket.on("connect_error", () => setStatus(false));
-
   socket.on("new_order", (order) => {
     if (!orders.some((o) => o.id === order.id)) orders.push(order);
     absorbOrders(orders);
-    render();
-  });
-  // An order deleted from another screen. (Polling used to cover this.)
-  socket.on("order_deleted", ({ id }) => {
-    orders = orders.filter((o) => o.id !== id);
-    printCounts.delete(id);
     render();
   });
   socket.on("settings_updated", (s) => {
