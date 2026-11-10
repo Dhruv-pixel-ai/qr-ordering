@@ -459,6 +459,30 @@ app.post("/api/tables/:table/clear", ah(async (req, res) => {
   res.json({ success: true });
 }));
 
+// ---------- API: move every order from one table to another ----------
+// Used when a customer changes seats. Only an EMPTY destination is allowed, so
+// two parties' orders can never get mixed. Nothing is deleted or re-priced and
+// the daily counter is untouched (it only changes on Clear).
+app.post("/api/tables/:from/move", ah(async (req, res) => {
+  const from = Number(req.params.from);
+  const to = Number(req.body && req.body.to);
+  const valid = (n) => Number.isInteger(n) && n >= 1 && n <= TOTAL_TABLES;
+  if (!valid(from) || !valid(to)) return res.status(400).json({ error: "Invalid table number" });
+  if (from === to) return res.status(400).json({ error: "Pick a different table" });
+
+  const ordersCol = db.collection("orders");
+  const occupied = await ordersCol.find({ table: to }, NO_ID).toArray();
+  if (occupied.length) {
+    return res.status(409).json({ error: `Table ${to} just got an order, pick another table` });
+  }
+  const result = await ordersCol.updateMany({ table: from }, { $set: { table: to } });
+  const moved = result.modifiedCount != null ? result.modifiedCount : result.matchedCount;
+  if (!moved) return res.status(400).json({ error: "That table has no orders to move" });
+
+  io.emit("table_moved", { from, to });
+  res.json({ success: true, moved });
+}));
+
 // ---------- API: daily counter (PIN protected) ----------
 // Returns amounts only. Deliberately exposes no order details.
 function checkPin(supplied) {

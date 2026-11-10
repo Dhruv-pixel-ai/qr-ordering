@@ -254,6 +254,10 @@ if (socket) {
   socket.on("settings_updated", (s) => {
     if (s) settings = s;
   });
+  socket.on("table_moved", ({ from, to }) => {
+    orders.forEach((o) => { if (o.table === from) o.table = to; });
+    render();
+  });
   socket.on("table_cleared", ({ table }) => {
     orders = orders.filter((o) => o.table !== table);
     render();
@@ -295,6 +299,7 @@ function renderTableCard(table) {
              <div class="table-footer">
                <button class="bill-btn" data-action="bill" data-table="${table}">${isParcel ? `🛍️ ${label} Bill` : "Generate Bill"}</button>
                <button class="clear-btn" data-action="clear" data-table="${table}">Clear</button>
+               <button class="move-btn" data-action="move" data-table="${table}">Move table</button>
              </div>`
           : ""
       }
@@ -358,6 +363,9 @@ function attachHandlers() {
   });
   document.querySelectorAll('[data-action="clear"]').forEach((btn) => {
     btn.addEventListener("click", () => clearTable(btn.dataset.table));
+  });
+  document.querySelectorAll('[data-action="move"]').forEach((btn) => {
+    btn.addEventListener("click", () => openMovePicker(btn.dataset.table));
   });
   document.querySelectorAll('[data-action="print-order"]').forEach((btn) => {
     btn.addEventListener("click", () => printSingleOrder(btn.dataset.orderId));
@@ -756,6 +764,64 @@ async function clearTable(table) {
   }
   tableOrders.forEach((o) => printCounts.delete(o.id));
   orders = orders.filter((o) => o.table !== Number(table));
+  closeModal();
+  render();
+}
+
+// ---- move all orders from one table to an EMPTY table ----------------------
+function tableName(t) {
+  return parcelLabel(t) ? parcelLabel(t) : `Table ${t}`;
+}
+
+function openMovePicker(from) {
+  from = Number(from);
+  const src = orders.filter((o) => o.table === from && !o.billed);
+  if (!src.length) return;
+  const itemCount = src.reduce((n, o) => n + o.items.reduce((s, it) => s + it.qty, 0), 0);
+  const empties = Array.from({ length: totalTables }, (_, i) => i + 1).filter(
+    (t) => t !== from && !orders.some((o) => o.table === t && !o.billed)
+  );
+  document.getElementById("billContent").innerHTML = `
+    <h3 style="margin:0 0 6px">Move ${escapeHtml(tableName(from))}</h3>
+    <p style="margin:0 0 12px;font-size:0.85rem;color:#555">
+      ${src.length} order(s), ${itemCount} item(s). Pick an empty table:
+    </p>
+    ${
+      empties.length
+        ? `<div class="move-grid">${empties
+            .map((t) => `<button class="move-target" data-to="${t}">${escapeHtml(tableName(t))}</button>`)
+            .join("")}</div>`
+        : `<p style="font-weight:600">No empty tables available.</p>`
+    }
+    <div class="modal-actions" style="display:flex">
+      <button type="button" id="moveCancel" style="background:#e9ecef;color:#222">Cancel</button>
+    </div>`;
+  document.getElementById("billModal").classList.remove("hidden");
+  document.getElementById("moveCancel").onclick = closeModal;
+  document.querySelectorAll(".move-target").forEach((b) => {
+    b.onclick = () => moveTable(from, Number(b.dataset.to), itemCount);
+  });
+}
+
+async function moveTable(from, to, itemCount) {
+  if (!confirm(`Move all ${itemCount} item(s) from ${tableName(from)} to ${tableName(to)}?`)) return;
+  try {
+    const res = await fetch(`/api/tables/${from}/move`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      closeModal();
+      await poll(); // refresh so the screen matches the server
+      return alert(data.error || "Could not move the table. Please try again.");
+    }
+  } catch (e) {
+    console.error("move failed:", e);
+    return alert("Could not move the table. Please check the connection and try again.");
+  }
+  orders.forEach((o) => { if (o.table === from) o.table = to; });
   closeModal();
   render();
 }
