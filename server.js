@@ -427,6 +427,21 @@ app.delete("/api/orders/:id", ah(async (req, res) => {
   res.json({ success: true });
 }));
 
+// ---------- API: record that an order slip was printed ----------
+// Stored on the order so the "new order = green" highlight survives page
+// refreshes and is the same on every screen. Printing itself still changes
+// nothing else - the order stays on the table until Clear.
+app.post("/api/orders/:id/printed", ah(async (req, res) => {
+  const col = db.collection("orders");
+  const result = await col.updateOne({ id: req.params.id }, { $inc: { printCount: 1 } });
+  const matched = result.matchedCount != null ? result.matchedCount : result.modifiedCount;
+  if (!matched) return res.status(404).json({ error: "Order not found" });
+  const [order] = await col.find({ id: req.params.id }, NO_ID).toArray();
+  const printCount = order ? order.printCount || 1 : 1;
+  io.emit("order_printed", { id: req.params.id, printCount });
+  res.json({ success: true, printCount });
+}));
+
 // ---------- API: clear a table (reset for next customer) ----------
 // Clearing a table is the moment the money is considered collected, so this is
 // where the day's counter is incremented. Only a single running total per day

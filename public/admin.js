@@ -162,7 +162,26 @@ function flashTitle(count) {
 // Announce anything we have not seen before. Runs for BOTH polling and socket
 // updates, so QR orders and waiter orders are treated identically and nothing
 // gets announced twice.
+// "Printed" lives on the server (order.printCount) so it survives refreshes and
+// is shared by every screen. Keep the larger of local/server so a print that
+// has not reached the server yet is never lost.
+function syncPrintCounts(list) {
+  list.forEach((o) => {
+    const server = Number(o.printCount) || 0;
+    if (server > (printCounts.get(o.id) || 0)) printCounts.set(o.id, server);
+  });
+}
+
+// Record a print locally (instant) and on the server (fire-and-forget).
+function markPrinted(orderId) {
+  printCounts.set(orderId, (printCounts.get(orderId) || 0) + 1);
+  fetch(`/api/orders/${encodeURIComponent(orderId)}/printed`, { method: "POST" }).catch((e) =>
+    console.error("could not save print state:", e)
+  );
+}
+
 function absorbOrders(list) {
+  syncPrintCounts(list);
   const active = list.filter((o) => !o.billed);
   const brandNew = active.filter((o) => !seenOrderIds.has(o.id));
 
@@ -253,6 +272,10 @@ if (socket) {
   });
   socket.on("settings_updated", (s) => {
     if (s) settings = s;
+  });
+  socket.on("order_printed", ({ id, printCount }) => {
+    if (printCount > (printCounts.get(id) || 0)) printCounts.set(id, printCount);
+    render();
   });
   socket.on("table_moved", ({ from, to }) => {
     orders.forEach((o) => { if (o.table === from) o.table = to; });
@@ -611,7 +634,7 @@ async function printSingleOrder(orderId) {
   const order = orders.find((o) => o.id === orderId);
   if (!order) return alert("That order is no longer on the dashboard.");
 
-  printCounts.set(order.id, (printCounts.get(order.id) || 0) + 1);
+  markPrinted(order.id);
   render();
 
   if (qzReady && printerCfg.kitchen.host) {
@@ -642,7 +665,7 @@ async function reprintSingleOrder(orderId) {
   const order = orders.find((o) => o.id === orderId);
   if (!order) return;
 
-  printCounts.set(order.id, (printCounts.get(order.id) || 0) + 1);
+  markPrinted(order.id);
   render();
 
   if (qzReady && printerCfg.kitchen.host) {
